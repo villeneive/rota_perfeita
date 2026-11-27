@@ -598,7 +598,7 @@ function tickAnimation() {
   requestAnimationFrame(tickAnimation);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function initRotaPerfeita() {
   mountIcons();
   populateTruckSelector();
   updateFleetKpis();
@@ -606,4 +606,10 @@ document.addEventListener('DOMContentLoaded', () => {
   updateCabinClock();
   setInterval(updateCabinClock, 1000);
   requestAnimationFrame(tickAnimation);
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initRotaPerfeita);
+} else {
+  initRotaPerfeita();
+}
