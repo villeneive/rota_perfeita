@@ -484,8 +484,21 @@
         </aside>
 
         <div class="carplay-stage">
+          <!-- Faixa Superior da Multimídia: Identificação do Motorista, Caminhão e Rua Atual -->
+          <div class="cp-identity-bar">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+              <label for="cpTruckSelect" style="font-size:12px;color:#94a3b8;font-weight:600">Cabine Ativa:</label>
+              <select id="cpTruckSelect" class="select-field" onchange="selectTruck(this.value)" style="padding:6px 10px"></select>
+              <span id="cpTruckMeta" style="font-size:13px;color:#e2e8f0;font-weight:600">Placa RPT-1A01 · Carga: 28,4 t (Eletrônicos)</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+              <span id="cpCurrentStreet" style="font-size:13px;color:#6ee7b7;font-weight:700">Local atual: Alameda Sgt. Assad Feres · São Paulo/SP</span>
+              <button type="button" class="btn-map-chip" onclick="useBrowserGeolocation()">Usar Meu GPS</button>
+            </div>
+          </div>
+
           <div id="cpScreenSplitAndMap" class="cp-split-grid">
-            <!-- Google Maps Navegação Fiel em Tempo Real dentro do CarPlay -->
+            <!-- Google Maps Navegação de Rua, Rotas e Trajetos em Tempo Real -->
             <div class="cp-map-box">
               <div id="carplayGmapViewport" class="cp-map-viewport">
                 <!-- Placa Verde Oficial de Manobra Estilo Google Maps Navigation -->
@@ -493,27 +506,27 @@
                   <div class="gmap-turn-main">
                     <span data-icon="arrow-up-right" data-size="30"></span>
                     <div>
-                      <p id="signDistText" class="mono-num" style="font-size:20px;font-weight:800;line-height:1.1">4,8 km</p>
-                      <p id="signRoadCode" style="font-size:14px;font-weight:700;margin-top:2px">Rod. Pres. Dutra (BR-116)</p>
+                      <p id="signDistText" class="mono-num" style="font-size:20px;font-weight:800;line-height:1.1">440 m</p>
+                      <p id="signRoadCode" style="font-size:14px;font-weight:700;margin-top:2px">Acesso Rod. Pres. Dutra (BR-116)</p>
                     </div>
                   </div>
                   <div class="gmap-turn-lanes">
-                    <span id="signRoadName">Mantenha as faixas da direita</span>
+                    <span id="signRoadName">Siga pela faixa da direita p/ Via Expressa</span>
                     <span>↑ &nbsp; ⬆ &nbsp; ⬆</span>
                   </div>
                 </div>
 
                 <!-- Botões Flutuantes Direitos no Google Maps do CarPlay -->
                 <div class="cp-map-tools">
-                  <button id="btnCp3d" type="button" class="gmap-ctrl-btn" onclick="toggleCarPlay3D()" title="Alternar 3D / 2D" style="font-size:12px">3D</button>
+                  <button id="btnCp3d" type="button" class="gmap-ctrl-btn" onclick="toggleCarPlay3D()" title="Alternar 2D / 3D" style="font-size:12px">2D</button>
                   <button type="button" class="gmap-ctrl-btn" onclick="toggleCarPlaySatellite()" title="Alternar Satélite" style="font-size:12px">SAT</button>
-                  <button type="button" class="gmap-ctrl-btn" onclick="zoomCarPlayMap(1)" title="Aproximar">+</button>
-                  <button type="button" class="gmap-ctrl-btn" onclick="zoomCarPlayMap(-1)" title="Afastar">−</button>
-                  <button type="button" class="gmap-ctrl-btn" onclick="recenterCarPlayMap()" title="Seguir Caminhão">◎</button>
+                  <button type="button" class="gmap-ctrl-btn" onclick="zoomCarPlayMap(1)" title="Mais Zoom (Ruas)">+</button>
+                  <button type="button" class="gmap-ctrl-btn" onclick="zoomCarPlayMap(-1)" title="Menos Zoom (Rota)">−</button>
+                  <button type="button" class="gmap-ctrl-btn" onclick="recenterCarPlayMap()" title="Centralizar no Caminhão">◎</button>
                 </div>
 
-                <!-- Palco de Tiles em Tempo Real do Google Maps no CarPlay -->
-                <div id="carplayGmapStage" class="gmap-stage tilt-3d">
+                <!-- Palco de Tiles de Rua em Tempo Real + Trajeto Percorrido e Rota Ativa -->
+                <div id="carplayGmapStage" class="gmap-stage">
                   <canvas id="carplayVectorCanvas" class="gmap-vector-canvas"></canvas>
                   <div id="carplayTilesContainer" class="gmap-tiles-layer"></div>
                   <svg id="carplayOverlaySvg" class="gmap-overlay-svg"></svg>
@@ -523,17 +536,17 @@
                 <div class="gmap-speed-Cluster">
                   <div id="idealSpeedSign" class="speed-limit-ring">70</div>
                   <div>
-                    <p id="driverSpeedVal" class="mono-num" style="font-size:18px;font-weight:800;line-height:1.1">78</p>
+                    <p id="driverSpeedVal" class="mono-num" style="font-size:18px;font-weight:800;line-height:1.1">62</p>
                     <p style="font-size:12px;color:#3c4043;font-weight:600">km/h</p>
                   </div>
                 </div>
               </div>
 
-              <!-- Barra Inferior Branca de Tempo e Chegada do Google Maps CarPlay -->
+              <!-- Barra Inferior Branca de Trajeto e Chegada do Respectivo Caminhão -->
               <div class="cp-eta-bar">
                 <div>
-                  <p id="gpsEta" class="mono-num" style="font-size:19px;font-weight:800;color:#137333">38 min · 38 km · Chegada 21:40</p>
-                  <p style="font-size:12px;color:#3c4043;font-weight:600">Próxima parada: Hub Km 120 (Posto Resende) · Trânsito livre</p>
+                  <p id="gpsEta" class="mono-num" style="font-size:18px;font-weight:800;color:#137333">5 h 12 min · 437 km · Chegada 21:40</p>
+                  <p id="cpNextStopSub" style="font-size:12px;color:#3c4043;font-weight:600">Rota: São Paulo, SP → Rio de Janeiro, RJ · Parada: Hub Km 120 (Resende)</p>
                 </div>
                 <button type="button" class="gmap-pill-btn active" onclick="switchCarPlayApp(state.carplayApp === 'map' ? 'split' : 'map')">
                   <span id="btnExpandCpMapText">Tela Cheia</span>
@@ -541,28 +554,34 @@
               </div>
             </div>
 
-            <!-- Widgets Direitos do CarPlay -->
+            <!-- Widgets Direitos do CarPlay (Dados Exclusivos do Motorista e Caminhão Selecionado) -->
             <div id="cpRightWidgets" class="cp-widgets-col">
               <div class="cp-widget">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-                  <h3 id="driverGreeting" style="color:#ffffff">Seu Carlos · CAM-01</h3>
-                  <span class="status-pill pill-emerald">Satélite OK</span>
+                  <div>
+                    <h3 id="driverGreeting" style="color:#ffffff">Seu Carlos Silva · CAM-01</h3>
+                    <p id="cpDriverVehicleSub" style="font-size:12px;color:#94a3b8;margin-top:2px">Scania R450 6 Eixos · Saúde Mecânica 98%</p>
+                  </div>
+                  <span id="cpLinkBadge" class="status-pill pill-emerald">Starlink LEO</span>
                 </div>
                 <p id="driverTipText" style="font-size:15px;margin-top:8px;color:#fde68a;font-weight:600">
                   Reduza para 70 km/h nos próximos 5 km para economizar 4% de diesel na subida.
                 </p>
-                <button id="btnAckEco" type="button" class="btn btn-emerald btn-full cp-cabin-btn" style="margin-top:10px" onclick="ackDriverCard('btnAckEco', 'Ritmo ideal confirmado (70 km/h)')">
-                  Ok, manter 70 km/h
+                <button id="btnAckEco" type="button" class="btn btn-emerald btn-full cp-cabin-btn" style="margin-top:10px" onclick="ackDriverCard('btnAckEco', 'Velocidade ideal confirmada')">
+                  Ok, seguir orientação da IA
                 </button>
               </div>
 
               <div class="cp-widget">
-                <h3 style="color:#fca5a5">Segurança &amp; Troca de Carreta</h3>
+                <h3 style="color:#7dd3fc">Trajeto, Segurança &amp; Parada</h3>
                 <p id="driverSecurityText" style="font-size:14px;margin-top:6px;color:#f1f5f9">
-                  Rota alterada automaticamente: <strong>evitando a BR-X devido ao horário de risco (22h)</strong>.
+                  Trajeto seguro monitorado via satélite · Sem bloqueios na via atual.
                 </p>
                 <p id="driverHubText" style="font-size:13px;margin-top:6px;color:#bae6fd">
                   Parada no Hub Km 120 (Resende) p/ troca de carreta c/ Caminhão B · Vaga 04 pronta.
+                </p>
+                <p id="cpFuelAndCostLine" style="font-size:12px;margin-top:8px;color:#6ee7b7;font-weight:600">
+                  Tanque: Meio tanque (+410 km) · Descanso em 38 min
                 </p>
               </div>
 

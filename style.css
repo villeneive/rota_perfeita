@@ -834,6 +834,18 @@ input:focus-visible {
   min-width: 0;
 }
 
+.cp-identity-bar {
+  background-color: #13202e;
+  border: 1px solid #243950;
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .cp-split-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.42fr) minmax(300px, 1fr);
