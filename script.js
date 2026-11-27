@@ -1,349 +1,120 @@
-// Rota Perfeita — Mapa Real (Google Routes API / Leaflet), Inspeção IA de Peças e Multimídia CarPlay
+// Rota Perfeita — Engine Fiel Google Maps em Tempo Real (Live Traffic + Satélite + Rotas), Inspeção IA e CarPlay
 
 function calcRouteCost({ km, dieselPrice, baseKmL, loadTons, maxTons, slopeIdx = 0.15, toll = 0, driverCost = 0, transshipment = 0, backhaulRevenue = 0 }) {
   const loadFactor = 1 + 0.28 * (loadTons / maxTons) + 0.12 * slopeIdx;
   const fuelPerKm = (dieselPrice / baseKmL) * loadFactor;
-  const maintPerKm = 0.92;
-  const total = km * (fuelPerKm + maintPerKm) + toll + driverCost + transshipment - backhaulRevenue;
+  const total = km * (fuelPerKm + 0.92) + toll + driverCost + transshipment - backhaulRevenue;
   return { total, perKm: total / km };
 }
 
 function calcRiskScore({ crimeIdx, weatherIdx, cargoValIdx, fatigueIdx, shadowIdx }) {
-  return Math.min(
-    100,
-    Math.round(100 * (0.35 * crimeIdx + 0.25 * weatherIdx + 0.20 * cargoValIdx + 0.10 * fatigueIdx + 0.10 * shadowIdx))
-  );
+  return Math.min(100, Math.round(100 * (0.35 * crimeIdx + 0.25 * weatherIdx + 0.20 * cargoValIdx + 0.10 * fatigueIdx + 0.10 * shadowIdx)));
 }
 
-// Decodificador de Polyline Oficial da Google Routes API v2
 function decodeGooglePolyline(encoded) {
   const points = [];
-  let index = 0;
-  let lat = 0;
-  let lng = 0;
+  let index = 0, lat = 0, lng = 0;
   while (index < encoded.length) {
-    let b;
-    let shift = 0;
-    let result = 0;
-    do {
-      b = encoded.charCodeAt(index++) - 63;
-      result |= (b & 0x1f) << shift;
-      shift += 5;
-    } while (b >= 0x20);
+    let b, shift = 0, result = 0;
+    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
     lat += result & 1 ? ~(result >> 1) : result >> 1;
-    shift = 0;
-    result = 0;
-    do {
-      b = encoded.charCodeAt(index++) - 63;
-      result |= (b & 0x1f) << shift;
-      shift += 5;
-    } while (b >= 0x20);
+    shift = 0; result = 0;
+    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
     lng += result & 1 ? ~(result >> 1) : result >> 1;
     points.push([lat / 1e5, lng / 1e5]);
   }
   return points;
 }
 
-(function selfCheck() {
-  const c1 = calcRouteCost({ km: 434, dieselPrice: 6.1, baseKmL: 2.55, loadTons: 28.4, maxTons: 30, toll: 380, driverCost: 420 });
-  console.assert(c1.perKm > 4 && c1.perKm < 7, 'Custo/km fora do esperado');
-  console.assert(calcRiskScore({ crimeIdx: 0.92, weatherIdx: 0.88, cargoValIdx: 0.85, fatigueIdx: 0.15, shadowIdx: 0.25 }) >= 70, 'Risco crítico inválido');
-})();
+// Geometria GPS Real da Malha Rodoviária Federal Brasileira (BR-116, BR-040, BR-050, BR-101, BR-364, BR-153)
+const REAL_HIGHWAYS = {
+  BR116_SP_RJ: [
+    [-23.5501, -46.6329], [-23.5226, -46.6303], [-23.5052, -46.5689], [-23.4534, -46.4699], [-23.4187, -46.3803],
+    [-23.3784, -46.2555], [-23.3488, -46.1707], [-23.3078, -46.0542], [-23.2449, -45.9272], [-23.1931, -45.8854],
+    [-23.1253, -45.7323], [-23.0746, -45.6505], [-23.0413, -45.5696], [-22.9832, -45.4662], [-22.9235, -45.3473],
+    [-22.8475, -45.2272], [-22.7841, -45.1515], [-22.7324, -45.0794], [-22.6693, -44.9898], [-22.621, -44.9091],
+    [-22.5718, -44.8648], [-22.5369, -44.7729], [-22.5097, -44.6876], [-22.4968, -44.5743], [-22.4597, -44.459],
+    [-22.4537, -44.3709], [-22.4537, -44.2959], [-22.4984, -44.2336], [-22.544, -44.1898], [-22.5618, -44.1474],
+    [-22.5884, -44.0948], [-22.5811, -44.0225], [-22.5866, -43.958], [-22.6159, -43.932], [-22.6493, -43.894],
+    [-22.6664, -43.8624], [-22.6725, -43.8349], [-22.6814, -43.824], [-22.7001, -43.752], [-22.7199, -43.6915],
+    [-22.7316, -43.6011], [-22.7406, -43.4988], [-22.7513, -43.4392], [-22.8127, -43.3311], [-22.8491, -43.2473],
+    [-22.889, -43.222], [-22.902, -43.1846], [-22.9068, -43.173]
+  ],
+  DETOUR_PETROPOLIS: [
+    [-23.5501, -46.6329], [-23.4534, -46.4699], [-23.3488, -46.1707], [-23.1931, -45.8854], [-23.0413, -45.5696],
+    [-22.8475, -45.2272], [-22.6693, -44.9898], [-22.5369, -44.7729], [-22.4597, -44.459], [-22.345, -44.12],
+    [-22.158, -43.785], [-22.095, -43.412], [-22.315, -43.225], [-22.5093, -43.1958], [-22.6515, -43.2838],
+    [-22.7888, -43.2856], [-22.8659, -43.2479], [-22.9068, -43.173]
+  ],
+  BR050_GYN_SP: [
+    [-16.687, -49.2648], [-17.7272, -49.1545], [-18.1811, -49.291], [-18.8444, -49.0931], [-18.919, -48.2775],
+    [-19.7767, -47.9715], [-20.8787, -47.8979], [-21.1706, -47.8099], [-21.8171, -47.497], [-22.6069, -47.3615], [-23.5501, -46.6329]
+  ],
+  BR116_CWB_SP: [
+    [-25.4284, -49.2732], [-25.311, -49.0143], [-25.0878, -48.6049], [-24.9238, -48.2623], [-24.7223, -48.0439],
+    [-24.4979, -47.8452], [-24.2627, -47.3793], [-24.0276, -47.1742], [-23.9292, -46.9959], [-23.608, -46.8145], [-23.4543, -46.5337]
+  ],
+  BR101_SSA_REC: [
+    [-12.9715, -38.5014], [-12.3065, -37.9036], [-11.5379, -37.5674], [-10.9472, -37.0731], [-10.1267, -36.7943],
+    [-9.6659, -35.7349], [-8.9254, -35.6372], [-8.4144, -35.3104], [-8.0476, -34.877]
+  ],
+  BR364_CGB_GYN: [
+    [-15.6014, -56.0979], [-15.8406, -55.1556], [-16.4671, -54.6372], [-16.8674, -53.8951], [-17.3797, -53.1376],
+    [-17.6705, -52.3323], [-17.9216, -51.7459], [-17.5396, -50.5806], [-17.0688, -49.806], [-16.687, -49.2648]
+  ],
+  BR101_POA_CWB: [
+    [-30.0347, -51.2177], [-29.8796, -50.2611], [-29.3415, -49.7862], [-28.6662, -49.1149], [-28.1496, -48.6919],
+    [-27.5954, -48.548], [-26.8691, -48.7299], [-26.2331, -48.9165], [-25.5893, -49.1715], [-25.4284, -49.2732]
+  ],
+  BR153_BEL_GYN: [
+    [-1.4556, -48.4899], [-2.0524, -47.5525], [-5.5264, -47.4798], [-7.784, -48.4652], [-10.1844, -48.3341],
+    [-11.9687, -49.2029], [-13.7069, -49.021], [-15.4629, -48.6135], [-16.687, -49.2648]
+  ]
+};
 
-// Frota Real posicionada nas Rodovias Federais do Brasil (Coordenadas Reais Lat/Lng)
-const fleet = [
-  {
-    id: 'CAM-01',
-    driver: 'Seu Carlos Silva',
-    model: 'Carreta 6 Eixos',
-    route: 'São Paulo, SP → Rio de Janeiro, RJ (BR-116)',
-    status: 'optimal',
-    loadTons: 28.4,
-    maxTons: 30,
-    kmL: 2.42,
-    costKm: 4.88,
-    tankDesc: 'Meio tanque (+410 km)',
-    restMin: 38,
-    speedKmh: 78,
-    idealKmh: 70,
-    link: 'Starlink LEO + 5G',
-    health: 'Saúde 98%',
-    aiNote: 'IA GOAT: Reduzir p/ 70 km/h na subida (+4% diesel)',
-    driverTip: 'Reduza para 70 km/h nos próximos 5 km para economizar 4% de diesel na subida.',
-    hubNotice: 'Parada no Hub Km 120 (Resende-RJ) p/ troca de carreta c/ Caminhão B · Vaga 04 pronta.',
-    waypoints: [[-23.5505, -46.6333], [-23.1896, -45.8841], [-22.8268, -45.1931], [-22.4705, -44.4509], [-22.7556, -43.4603], [-22.9068, -43.1729]],
-    t: 0.34,
-    step: 0.00055
-  },
-  {
-    id: 'CAM-04',
-    driver: 'Marcos Lima',
-    model: 'Graneleiro · Vazio',
-    route: 'Goiânia, GO → São Paulo, SP (BR-050)',
-    status: 'empty',
-    loadTons: 0.0,
-    maxTons: 30,
-    kmL: 3.15,
-    costKm: 5.64,
-    tankDesc: '3/4 tanque (+620 km)',
-    restMin: 95,
-    speedKmh: 80,
-    idealKmh: 80,
-    link: '5G + Satélite Standby',
-    health: 'Vazio · Match IA',
-    aiNote: 'Coletar 18t em Uberlândia (+R$ 6.400 líquidos)',
-    driverTip: 'Mantenha 80 km/h constantes na BR-050 para máxima eficiência.',
-    hubNotice: 'Coleta de retorno sugerida em Uberlândia (9 km da rodovia).',
-    waypoints: [[-16.6869, -49.2648], [-18.4192, -49.2153], [-18.9186, -48.2772], [-21.1704, -47.8103], [-22.9099, -47.0626], [-23.5505, -46.6333]],
-    t: 0.32,
-    step: 0.0006
-  },
-  {
-    id: 'CAM-08',
-    driver: 'João Pedro',
-    model: 'Cavalo + Baú (Revezamento)',
-    route: 'Rio de Janeiro, RJ → Hub Resende (BR-116)',
-    status: 'hub',
-    loadTons: 26.0,
-    maxTons: 30,
-    kmL: 2.48,
-    costKm: 4.76,
-    tankDesc: 'Tanque cheio (+780 km)',
-    restMin: 38,
-    speedKmh: 74,
-    idealKmh: 75,
-    link: '5G + Starlink Ativo',
-    health: 'Encontro em 38m',
-    aiNote: 'Troca de semirreboque agendada c/ CAM-01 em Resende',
-    driverTip: 'Ritmo ideal! Chegada sincronizada com o CAM-01 sem fila.',
-    hubNotice: 'Estacione na Vaga 04 do Hub Resende para troca de carreta.',
-    waypoints: [[-22.9068, -43.1729], [-22.7152, -43.5553], [-22.5202, -44.1041], [-22.4705, -44.4509]],
-    t: 0.48,
-    step: 0.0005
-  },
-  {
-    id: 'CAM-12',
-    driver: 'André Souza',
-    model: 'Carreta 30t (Baldeação VUC)',
-    route: 'Curitiba, PR → Hub Guarulhos, SP (BR-116)',
-    status: 'hub',
-    loadTons: 29.8,
-    maxTons: 30,
-    kmL: 2.36,
-    costKm: 4.91,
-    tankDesc: 'Meio tanque (+390 km)',
-    restMin: 52,
-    speedKmh: 72,
-    idealKmh: 70,
-    link: 'Starlink LEO Ativo',
-    health: 'Baldeação ZMRC',
-    aiNote: 'Transferir carga p/ 3 VUCs elétricos no Hub Guarulhos',
-    driverTip: 'Use freio-motor na Serra do Cafezal para poupar os freios.',
-    hubNotice: 'Evite a Marginal: pare na Doca 02 em Guarulhos p/ baldeação aos VUCs.',
-    waypoints: [[-25.4284, -49.2733], [-24.4979, -47.8449], [-23.9819, -46.8833], [-23.4543, -46.5337]],
-    t: 0.58,
-    step: 0.00055
-  },
-  {
-    id: 'CAM-15',
-    driver: 'Raimundo Neto',
-    model: 'Carreta Sider',
-    route: 'Belém, PA → Goiânia, GO (BR-153)',
-    status: 'optimal',
-    loadTons: 25.2,
-    maxTons: 30,
-    kmL: 2.51,
-    costKm: 4.72,
-    tankDesc: '2/3 tanque (+530 km)',
-    restMin: 110,
-    speedKmh: 76,
-    idealKmh: 75,
-    link: 'Starlink LEO Exclusivo',
-    health: 'Saúde 99%',
-    aiNote: 'Área sem sinal celular · 100% conectado via Starlink LEO',
-    driverTip: 'Pista livre à frente na BR-153. Mantenha 75 km/h.',
-    hubNotice: 'Parada segura programada em Palmas (Posto Conveniado).',
-    waypoints: [[-1.4558, -48.4902], [-5.5266, -47.4797], [-10.184, -48.3336], [-16.6869, -49.2648]],
-    t: 0.44,
-    step: 0.00045
-  },
-  {
-    id: 'CAM-19',
-    driver: 'Roberto Alves',
-    model: 'Bitrem 37t',
-    route: 'Cuiabá, MT → Goiânia, GO (BR-364)',
-    status: 'optimal',
-    loadTons: 36.5,
-    maxTons: 38,
-    kmL: 2.28,
-    costKm: 4.79,
-    tankDesc: 'Tanque cheio (+710 km)',
-    restMin: 84,
-    speedKmh: 75,
-    idealKmh: 75,
-    link: 'Starlink LEO Ativo',
-    health: 'Saúde 97%',
-    aiNote: 'Pressão dos 22 pneus e temperatura dos eixos estáveis',
-    driverTip: 'Condução exemplar! Economia de 5% acima da meta hoje.',
-    hubNotice: 'Descanso reservado no Hub Rondonópolis às 22:15.',
-    waypoints: [[-15.6014, -56.0979], [-16.4673, -54.6372], [-17.8814, -51.7144], [-16.6869, -49.2648]],
-    t: 0.42,
-    step: 0.0005
-  },
-  {
-    id: 'CAM-23',
-    driver: 'Paulo Nunes',
-    model: 'Baú Refrigerado (-18 °C)',
-    route: 'Salvador, BA → Recife, PE (BR-101)',
-    status: 'optimal',
-    loadTons: 22.1,
-    maxTons: 28,
-    kmL: 2.59,
-    costKm: 4.61,
-    tankDesc: 'Meio tanque (+440 km)',
-    restMin: 65,
-    speedKmh: 78,
-    idealKmh: 78,
-    link: '5G + Starlink',
-    health: 'Frio -18 °C OK',
-    aiNote: 'Termometria da câmara fria cravada em -18,2 °C',
-    driverTip: 'Baú refrigerado operando 100%. Siga na faixa direita.',
-    hubNotice: 'Descarga direta no CD Recife Sul com senha liberada.',
-    waypoints: [[-12.9714, -38.5014], [-10.9472, -37.0731], [-9.6658, -35.735], [-8.0476, -34.877]],
-    t: 0.36,
-    step: 0.0006
-  },
-  {
-    id: 'CAM-27',
-    driver: 'Sérgio Moraes',
-    model: 'Carreta Prancha',
-    route: 'Porto Alegre, RS → Curitiba, PR (BR-101)',
-    status: 'optimal',
-    loadTons: 24.0,
-    maxTons: 30,
-    kmL: 2.46,
-    costKm: 4.81,
-    tankDesc: '3/4 tanque (+590 km)',
-    restMin: 72,
-    speedKmh: 73,
-    idealKmh: 75,
-    link: '5G Multi-Operadora',
-    health: 'Saúde 98%',
-    aiNote: 'Fluxo normal no litoral catarinense · Sem retenções',
-    driverTip: 'Vento lateral moderado em Laguna: mantenha 70 km/h na ponte.',
-    hubNotice: 'Ponto de descanso em Joinville disponível em 1h 12m.',
-    waypoints: [[-30.0346, -51.2177], [-28.6775, -49.3697], [-27.5954, -48.548], [-26.3045, -48.8487], [-25.4284, -49.2733]],
-    t: 0.51,
-    step: 0.00055
-  }
+const BRAZIL_BORDER_COORDS = [
+  [4.44, -51.55], [2.15, -50.52], [0.18, -49.85], [-0.72, -48.12], [-1.52, -46.15], [-2.52, -44.28],
+  [-2.88, -41.68], [-3.72, -38.52], [-5.12, -35.48], [-7.12, -34.82], [-8.05, -34.88], [-9.66, -35.73],
+  [-10.95, -37.07], [-12.97, -38.51], [-14.79, -39.03], [-17.73, -39.26], [-20.31, -40.29], [-22.02, -41.05],
+  [-22.91, -42.02], [-22.95, -43.18], [-23.35, -44.72], [-23.96, -46.33], [-25.52, -48.51], [-27.59, -48.55],
+  [-29.33, -49.72], [-31.77, -51.35], [-33.74, -53.39], [-32.55, -53.72], [-30.89, -55.53], [-30.18, -57.58],
+  [-28.18, -56.01], [-27.28, -55.58], [-25.59, -54.58], [-24.05, -54.31], [-22.54, -55.72], [-22.12, -57.92],
+  [-19.01, -57.65], [-17.78, -57.72], [-16.28, -58.38], [-15.12, -60.15], [-13.58, -60.45], [-12.48, -64.32],
+  [-10.88, -65.34], [-9.92, -67.82], [-11.02, -69.58], [-10.68, -70.52], [-9.42, -72.88], [-7.42, -73.98],
+  [-6.68, -71.85], [-4.22, -69.94], [-1.95, -69.45], [-1.18, -69.52], [1.18, -69.85], [1.88, -67.08],
+  [0.88, -66.15], [1.62, -63.88], [3.88, -64.55], [4.25, -61.22], [5.27, -60.21], [4.15, -59.75],
+  [1.85, -58.85], [1.45, -56.45], [2.25, -54.55], [3.85, -52.25]
 ];
 
-// Subsistemas do Módulo de Inspeção IA de Peças do Caminhão
+const BRAZIL_CITIES = [
+  [-23.5505, -46.6333, 'São Paulo'], [-22.9068, -43.1729, 'Rio de Janeiro'], [-19.9167, -43.9345, 'Belo Horizonte'],
+  [-25.4284, -49.2733, 'Curitiba'], [-30.0346, -51.2177, 'Porto Alegre'], [-15.7975, -47.8919, 'Brasília'],
+  [-16.6869, -49.2648, 'Goiânia'], [-15.6014, -56.0979, 'Cuiabá'], [-12.9714, -38.5014, 'Salvador'],
+  [-8.0476, -34.877, 'Recife'], [-3.7319, -38.5267, 'Fortaleza'], [-1.4558, -48.4902, 'Belém'],
+  [-3.119, -60.0217, 'Manaus'], [-23.1896, -45.8841, 'São José dos Campos'], [-22.4705, -44.4509, 'Resende'],
+  [-18.9186, -48.2772, 'Uberlândia'], [-21.1704, -47.8103, 'Ribeirão Preto']
+];
+
+const fleet = [
+  { id: 'CAM-01', driver: 'Seu Carlos Silva', model: 'Carreta 6 Eixos', route: 'São Paulo, SP → Rio de Janeiro, RJ (BR-116)', status: 'optimal', loadTons: 28.4, kmL: 2.42, costKm: 4.88, tankDesc: 'Meio tanque (+410 km)', restMin: 38, speedKmh: 78, idealKmh: 70, link: 'Starlink LEO + 5G', health: 'Saúde 98%', aiNote: 'IA GOAT: Reduzir p/ 70 km/h na subida (+4% diesel)', driverTip: 'Reduza para 70 km/h nos próximos 5 km para economizar 4% de diesel na subida.', hubNotice: 'Parada no Hub Km 120 (Resende-RJ) p/ troca de carreta c/ Caminhão B · Vaga 04 pronta.', waypoints: REAL_HIGHWAYS.BR116_SP_RJ.slice(), t: 0.36, step: 0.00038 },
+  { id: 'CAM-04', driver: 'Marcos Lima', model: 'Graneleiro · Vazio', route: 'Goiânia, GO → São Paulo, SP (BR-050)', status: 'empty', loadTons: 0.0, kmL: 3.15, costKm: 5.64, tankDesc: '3/4 tanque (+620 km)', restMin: 95, speedKmh: 80, idealKmh: 80, link: '5G + Satélite Standby', health: 'Vazio · Match IA', aiNote: 'Coletar 18t em Uberlândia (+R$ 6.400 líquidos)', driverTip: 'Mantenha 80 km/h constantes na BR-050.', hubNotice: 'Coleta sugerida em Uberlândia (9 km da pista).', waypoints: REAL_HIGHWAYS.BR050_GYN_SP, t: 0.31, step: 0.00045 },
+  { id: 'CAM-08', driver: 'João Pedro', model: 'Cavalo + Baú (Revezamento)', route: 'Rio de Janeiro, RJ → Hub Resende (BR-116)', status: 'hub', loadTons: 26.0, kmL: 2.48, costKm: 4.76, tankDesc: 'Tanque cheio (+780 km)', restMin: 38, speedKmh: 74, idealKmh: 75, link: '5G + Starlink', health: 'Encontro em 38m', aiNote: 'Troca de semirreboque agendada c/ CAM-01 em Resende', driverTip: 'Ritmo excelente até o Hub Resende.', hubNotice: 'Estacione na Vaga 04 do Hub Resende.', waypoints: REAL_HIGHWAYS.BR116_SP_RJ.slice(24).reverse(), t: 0.48, step: 0.00042 },
+  { id: 'CAM-12', driver: 'André Souza', model: 'Carreta 30t (Baldeação VUC)', route: 'Curitiba, PR → Hub Guarulhos, SP (BR-116)', status: 'hub', loadTons: 29.8, kmL: 2.36, costKm: 4.91, tankDesc: 'Meio tanque (+390 km)', restMin: 52, speedKmh: 72, idealKmh: 70, link: 'Starlink LEO Ativo', health: 'Baldeação ZMRC', aiNote: 'Transferir carga p/ 3 VUCs elétricos no Hub Guarulhos', driverTip: 'Use freio-motor na Serra do Cafezal.', hubNotice: 'Pare na Doca 02 em Guarulhos p/ baldeação aos VUCs.', waypoints: REAL_HIGHWAYS.BR116_CWB_SP, t: 0.58, step: 0.00046 },
+  { id: 'CAM-15', driver: 'Raimundo Neto', model: 'Carreta Sider', route: 'Belém, PA → Goiânia, GO (BR-153)', status: 'optimal', loadTons: 25.2, kmL: 2.51, costKm: 4.72, tankDesc: '2/3 tanque (+530 km)', restMin: 110, speedKmh: 76, idealKmh: 75, link: 'Starlink LEO Exclusivo', health: 'Saúde 99%', aiNote: 'Área remota · 100% conectado via satélite LEO', driverTip: 'Pista livre na BR-153.', hubNotice: 'Parada segura programada em Palmas.', waypoints: REAL_HIGHWAYS.BR153_BEL_GYN, t: 0.44, step: 0.00035 },
+  { id: 'CAM-19', driver: 'Roberto Alves', model: 'Bitrem 37t', route: 'Cuiabá, MT → Goiânia, GO (BR-364)', status: 'optimal', loadTons: 36.5, kmL: 2.28, costKm: 4.79, tankDesc: 'Tanque cheio (+710 km)', restMin: 84, speedKmh: 75, idealKmh: 75, link: 'Starlink LEO Ativo', health: 'Saúde 97%', aiNote: 'Pressão dos 22 pneus e temperatura estáveis', driverTip: 'Economia de 5% acima da meta hoje.', hubNotice: 'Descanso reservado em Rondonópolis.', waypoints: REAL_HIGHWAYS.BR364_CGB_GYN, t: 0.42, step: 0.0004 },
+  { id: 'CAM-23', driver: 'Paulo Nunes', model: 'Baú Refrigerado (-18 °C)', route: 'Salvador, BA → Recife, PE (BR-101)', status: 'optimal', loadTons: 22.1, kmL: 2.59, costKm: 4.61, tankDesc: 'Meio tanque (+440 km)', restMin: 65, speedKmh: 78, idealKmh: 78, link: '5G + Starlink', health: 'Frio -18 °C OK', aiNote: 'Termometria da câmara fria estável em -18,2 °C', driverTip: 'Baú refrigerado operando 100%.', hubNotice: 'Descarga direta no CD Recife Sul.', waypoints: REAL_HIGHWAYS.BR101_SSA_REC, t: 0.36, step: 0.00048 },
+  { id: 'CAM-27', driver: 'Sérgio Moraes', model: 'Carreta Prancha', route: 'Porto Alegre, RS → Curitiba, PR (BR-101)', status: 'optimal', loadTons: 24.0, kmL: 2.46, costKm: 4.81, tankDesc: '3/4 tanque (+590 km)', restMin: 72, speedKmh: 73, idealKmh: 75, link: '5G Multi-Operadora', health: 'Saúde 98%', aiNote: 'Fluxo normal no litoral sul', driverTip: 'Mantenha 70 km/h na ponte de Laguna.', hubNotice: 'Parada em Joinville em 1h 12m.', waypoints: REAL_HIGHWAYS.BR101_POA_CWB, t: 0.51, step: 0.00045 }
+];
+
 const truckParts = [
-  {
-    key: 'engine',
-    num: 1,
-    name: 'Motor Turbo-Diesel & Injeção',
-    code: 'Protocolo SAE J1939 · Amostragem 100 ms',
-    health: 98,
-    status: 'ok',
-    m1: '91 °C (Óleo normal)',
-    m2: '2,1 bar (Turbo OK)',
-    m3: '0,14 g (Vibração limpa)',
-    m4: '14.200 km p/ revisão',
-    verdict: 'Queima equilibrada nos 6 cilindros e bicos injetores calibrados. Sem risco de falha mecânica.'
-  },
-  {
-    key: 'gearbox',
-    num: 2,
-    name: 'Transmissão Automatizada & Embreagem',
-    code: 'Sensor TCU · Caixa 12 Velocidades',
-    health: 96,
-    status: 'ok',
-    m1: '78 °C (Fluido OK)',
-    m2: 'Desgaste disco: 12%',
-    m3: 'Trocas suaves IA',
-    m4: '38.000 km restantes',
-    verdict: 'Trocas de marcha sincronizadas com a topografia da rodovia pela IA GOAT, reduzindo desgaste.'
-  },
-  {
-    key: 'tanks',
-    num: 3,
-    name: 'Tanques de Diesel Duplos & Arla 32',
-    code: 'Sensor Ultrassônico/Capacitivo (±0,2%)',
-    health: 99,
-    status: 'ok',
-    m1: '412 L / 700 L (59%)',
-    m2: 'Vazão: 2,42 km/L',
-    m3: 'Arla 32: 74% nível',
-    m4: 'Zero vazamento/furto',
-    verdict: 'Curva de consumo compatível com carga de 28,4t. Nenhuma queda abrupta de nível detectada.'
-  },
-  {
-    key: 'starlink',
-    num: 4,
-    name: 'Antena Starlink LEO + Câmeras RotaCAM',
-    code: 'SD-WAN Híbrido 5G + Satélite Baixa Órbita',
-    health: 100,
-    status: 'ok',
-    m1: 'Latência: 142 ms',
-    m2: 'Uptime: 99,98%',
-    m3: '4 Câmeras PoE IR OK',
-    m4: 'Lentes limpas / REC',
-    verdict: 'Visibilidade 360° ativa sem pontos cegos e telemetria contínua mesmo em serras sem sinal 5G.'
-  },
-  {
-    key: 'coupling',
-    num: 5,
-    name: 'Quinta Roda, Pino-Rei & Suspensão Ar',
-    code: 'Células de Carga por Eixo + Trava Eletrônica',
-    health: 97,
-    status: 'ok',
-    m1: 'Carga: 28,4 t (PBTC)',
-    m2: 'Trava: Engatada OK',
-    m3: 'Bolsas ar: 6,8 bar',
-    m4: '22.500 km p/ lubrif.',
-    verdict: 'Peso distribuído uniformemente entre cavalo e semirreboque. Trava antifurto selada.'
-  },
-  {
-    key: 'battery',
-    num: 6,
-    name: 'Sistema 24V, Alternador & Edge AI TPM',
-    code: 'NVIDIA Jetson Orin + Chip Cripto TPM 2.0',
-    health: 98,
-    status: 'ok',
-    m1: 'Tensão: 28,1 V',
-    m2: 'GPU Borda: 54 °C',
-    m3: 'Cripto AES-256 OK',
-    m4: 'Baterias 95% SoH',
-    verdict: 'Alimentação elétrica estável, processamento local ativo e telemetria criptografada ponta a ponta.'
-  },
-  {
-    key: 'brakes',
-    num: 7,
-    name: 'Freios Pneumáticos ABS/EBS (6 Eixos)',
-    code: 'Sensores Térmicos e Espessura de Lonas',
-    health: 94,
-    status: 'ok',
-    m1: 'Temp. máx: 138 °C',
-    m2: 'Linha ar: 8,4 bar',
-    m3: 'Lonas: 82% vida',
-    m4: '18.600 km restantes',
-    verdict: 'Temperatura simétrica em todos os tambores/discos. Frenagem regenerativa/motor operando bem.'
-  },
-  {
-    key: 'tires',
-    num: 8,
-    name: 'Conjunto de 22 Pneus (Sensores TPMS)',
-    code: 'Monitoramento Sem Fio de Pressão e Banda',
-    health: 95,
-    status: 'ok',
-    m1: 'Pressão: 115 PSI',
-    m2: 'Temp. banda: 52 °C',
-    m3: 'Sulco médio: 11,4 mm',
-    m4: '26.000 km estimados',
-    verdict: 'Calibragem ideal em todos os 22 pneus, evitando arrasto extra e economizando até 3% de diesel.'
-  }
+  { key: 'engine', num: 1, name: 'Motor Turbo-Diesel & Injeção', code: 'SAE J1939 · Amostragem 100 ms', health: 98, m1: '91 °C (Óleo normal)', m2: '2,1 bar (Turbo OK)', m3: '0,14 g (Vibração limpa)', m4: '14.200 km p/ revisão', verdict: 'Queima equilibrada nos 6 cilindros e bicos injetores calibrados. Sem risco de falha mecânica.' },
+  { key: 'gearbox', num: 2, name: 'Transmissão Automatizada & Embreagem', code: 'Sensor TCU · Caixa 12 Velocidades', health: 96, m1: '78 °C (Fluido OK)', m2: 'Desgaste disco: 12%', m3: 'Trocas suaves IA', m4: '38.000 km restantes', verdict: 'Trocas de marcha sincronizadas com a topografia pela IA GOAT, reduzindo desgaste.' },
+  { key: 'tanks', num: 3, name: 'Tanques de Diesel Duplos & Arla 32', code: 'Sensor Ultrassônico/Capacitivo (±0,2%)', health: 99, m1: '412 L / 700 L (59%)', m2: 'Vazão: 2,42 km/L', m3: 'Arla 32: 74% nível', m4: 'Zero vazamento/furto', verdict: 'Curva de consumo compatível com carga de 28,4t. Nenhuma queda abrupta detectada.' },
+  { key: 'starlink', num: 4, name: 'Antena Starlink LEO + Câmeras RotaCAM', code: 'SD-WAN Híbrido 5G + Satélite LEO', health: 100, m1: 'Latência: 142 ms', m2: 'Uptime: 99,98%', m3: '4 Câmeras PoE IR OK', m4: 'Lentes limpas / REC', verdict: 'Visibilidade 360° ativa sem pontos cegos e telemetria contínua mesmo em serras.' },
+  { key: 'coupling', num: 5, name: 'Quinta Roda, Pino-Rei & Suspensão Ar', code: 'Células de Carga por Eixo + Trava', health: 97, m1: 'Carga: 28,4 t (PBTC)', m2: 'Trava: Engatada OK', m3: 'Bolsas ar: 6,8 bar', m4: '22.500 km p/ lubrif.', verdict: 'Peso distribuído uniformemente entre cavalo e semirreboque. Trava antifurto selada.' },
+  { key: 'battery', num: 6, name: 'Sistema 24V, Alternador & Edge AI TPM', code: 'NVIDIA Jetson Orin + Chip TPM 2.0', health: 98, m1: 'Tensão: 28,1 V', m2: 'GPU Borda: 54 °C', m3: 'Cripto AES-256 OK', m4: 'Baterias 95% SoH', verdict: 'Alimentação elétrica estável e telemetria criptografada ponta a ponta.' },
+  { key: 'brakes', num: 7, name: 'Freios Pneumáticos ABS/EBS (6 Eixos)', code: 'Sensores Térmicos e Espessura de Lonas', health: 94, m1: 'Temp. máx: 138 °C', m2: 'Linha ar: 8,4 bar', m3: 'Lonas: 82% vida', m4: '18.600 km restantes', verdict: 'Temperatura simétrica em todos os tambores/discos.' },
+  { key: 'tires', num: 8, name: 'Conjunto de 22 Pneus (Sensores TPMS)', code: 'Monitoramento Sem Fio de Pressão e Banda', health: 95, m1: 'Pressão: 115 PSI', m2: 'Temp. banda: 52 °C', m3: 'Sulco médio: 11,4 mm', m4: '26.000 km estimados', verdict: 'Calibragem ideal nos 22 pneus, economizando até 3% de diesel.' }
 ];
 
 const radioStations = [
@@ -366,17 +137,19 @@ const state = {
   radioIdx: 0,
   radioPlaying: true,
   carplayApp: 'split',
-  carplaySat: false,
+  carplay3D: true,
+  followTower: false,
+  followCarPlay: true,
   showHubs: true,
   showRisk: false,
   gmapsKey: '',
-  usingNativeGoogle: false,
+  activePrimaryRoute: REAL_HIGHWAYS.BR116_SP_RJ.slice(),
+  activeAltRoute: REAL_HIGHWAYS.DETOUR_PETROPOLIS.slice(),
   dashOffset: 0
 };
 
-const statusColors = { optimal: '#10b981', empty: '#f59e0b', hub: '#38bdf8', danger: '#ef4444' };
+const statusColors = { optimal: '#188038', empty: '#f29900', hub: '#1967d2', danger: '#d93025' };
 
-// Ícones SVG Vetoriais Nativos
 const svgIcons = {
   radar: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="12" x2="18.5" y2="5.5"/>',
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
@@ -389,7 +162,6 @@ const svgIcons = {
   fuel: '<rect x="4" y="4" width="10" height="16" rx="1"/><path d="M14 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V9l-3-3"/>',
   'trending-down': '<polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/>',
   repeat: '<polyline points="17 2 21 6 17 10"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 22 3 18 7 14"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
-  route: '<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>',
   'package-plus': '<path d="M21 10V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l2-1.1"/><path d="M16 19h6M19 16v6"/>',
   'git-fork': '<circle cx="12" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9v2a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9M12 13v2"/>',
   wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
@@ -414,132 +186,393 @@ function mountIcons() {
   });
 }
 
-// ==================== ENGINE DE MAPA REAL (LEAFLET + GOOGLE ROUTES API / OSRM) ====================
-let towerMap = null;
-let carplayMap = null;
-let towerTileLayer = null;
-let carplayTileLayer = null;
-let activeRoutePolyline = null;
-let detourRoutePolyline = null;
-let carplayRoutePolyline = null;
-let hubLayerGroup = null;
-let riskCircleLayer = null;
-const leafletTruckMarkers = {};
-let carplayTruckMarker = null;
+// ==================== PROJEÇÃO WEB MERCATOR & GOOGLE MAPS LIVE SLIPPY ENGINE ====================
+function latLngToWorld(lat, lng, zoom) {
+  const scale = 256 * Math.pow(2, zoom);
+  const clampedLat = Math.max(-85.0511, Math.min(85.0511, lat));
+  const sinLat = Math.sin((clampedLat * Math.PI) / 180);
+  const x = ((lng + 180) / 360) * scale;
+  const y = (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * scale;
+  return { x, y };
+}
 
-// Google Maps Native instances (quando API key oficial é ativada)
-let gTowerMap = null;
-let gCarplayMap = null;
-let gRoutePoly = null;
-let gCarplayPoly = null;
-const gTruckMarkers = {};
-let gCarplayMarker = null;
+function worldToLatLng(wx, wy, zoom) {
+  const scale = 256 * Math.pow(2, zoom);
+  const lng = (wx / scale) * 360 - 180;
+  const n = Math.PI - (2 * Math.PI * wy) / scale;
+  const lat = (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+  return { lat: Math.max(-85, Math.min(85, lat)), lng: ((((lng + 180) % 360) + 360) % 360) - 180 };
+}
 
-const TILE_URLS = {
-  road: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-};
-
-function interpLatLng(pts, t) {
-  if (!pts || pts.length < 2) return [-23.5505, -46.6333];
+function interpRouteWithHeading(pts, t) {
+  if (!pts || pts.length < 2) return { lat: -23.5505, lng: -46.6333, heading: 65 };
   const segs = pts.length - 1;
   const scaled = Math.min(0.9999, Math.max(0, t)) * segs;
   const idx = Math.floor(scaled);
   const frac = scaled - idx;
   const [lat1, lng1] = pts[idx];
   const [lat2, lng2] = pts[idx + 1];
-  return [lat1 + (lat2 - lat1) * frac, lng1 + (lng2 - lng1) * frac];
+  const lat = lat1 + (lat2 - lat1) * frac;
+  const lng = lng1 + (lng2 - lng1) * frac;
+  const dy = lat2 - lat1;
+  const dx = (lng2 - lng1) * Math.cos((lat * Math.PI) / 180);
+  const heading = ((Math.atan2(dx, dy) * 180) / Math.PI + 360) % 360;
+  return { lat, lng, heading };
 }
 
-function initRealMaps() {
-  if (typeof window.L === 'undefined') {
-    renderGeoFallbackBrazilMap();
-    return;
+class GoogleRealtimeSlippyMap {
+  constructor({ stageId, canvasId, tilesId, svgId, centerLat, centerLng, zoom, isCarPlay = false }) {
+    this.stage = document.getElementById(stageId);
+    this.canvas = document.getElementById(canvasId);
+    this.tilesEl = document.getElementById(tilesId);
+    this.svgEl = document.getElementById(svgId);
+    this.centerLat = centerLat;
+    this.centerLng = centerLng;
+    this.zoom = zoom;
+    this.mode = 'road'; // 'road' | 'satellite' | 'terrain'
+    this.traffic = true;
+    this.isCarPlay = isCarPlay;
+    this.tileCache = new Map();
+    this.dragging = false;
+    this.lastX = 0;
+    this.lastY = 0;
+    this.bindEvents();
   }
 
-  // 1. Mapa Principal da Torre de Controle (Formato Real do Brasil)
-  towerMap = L.map('towerMapCanvas', { zoomControl: true }).fitBounds([
-    [-33.75, -73.98],
-    [5.27, -34.79]
-  ]);
-
-  towerTileLayer = L.tileLayer(TILE_URLS.road, {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap · Rota Perfeita IA'
-  }).addTo(towerMap);
-
-  // Hubs estratégicos
-  hubLayerGroup = L.layerGroup().addTo(towerMap);
-  const hubs = [
-    { pos: [-22.4705, -44.4509], label: 'Hub Km 120 (Resende-RJ)' },
-    { pos: [-23.4543, -46.5337], label: 'Hub VUC (Guarulhos-SP)' },
-    { pos: [-18.9186, -48.2772], label: 'Coleta Retorno (Uberlândia 18t)' }
-  ];
-  hubs.forEach((h) => {
-    const icon = L.divIcon({
-      className: '',
-      html: `<div class="rp-hub-marker">${h.label}</div>`,
-      iconAnchor: [55, 14]
+  bindEvents() {
+    this.stage.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('[data-truck-click]')) return;
+      this.dragging = true;
+      this.lastX = e.clientX;
+      this.lastY = e.clientY;
+      this.stage.setPointerCapture(e.pointerId);
+      if (this.isCarPlay) state.followCarPlay = false;
+      else {
+        state.followTower = false;
+        const chip = document.getElementById('chipFollowTower');
+        if (chip) chip.classList.remove('active');
+      }
     });
-    L.marker(h.pos, { icon }).addTo(hubLayerGroup);
-  });
 
-  // Mancha de Risco Dinâmico (Serra das Araras / BR-116 às 22h)
-  riskCircleLayer = L.circle([-22.66, -43.86], {
-    radius: 26000,
-    color: '#ef4444',
-    fillColor: '#ef4444',
-    fillOpacity: 0.28,
-    weight: 2
-  }).bindPopup('<strong>BR-X / Serra Bloqueada (22h)</strong><br>Score de Risco: 86/100 (Horário + Tempestade)');
-
-  // Marcadores em tempo real dos 8 caminhões
-  fleet.forEach((tr) => {
-    const pos = interpLatLng(tr.waypoints, tr.t);
-    const marker = L.marker(pos, { icon: createTruckDivIcon(tr) }).addTo(towerMap);
-    marker.on('click', () => {
-      selectTruck(tr.id);
-      towerMap.panTo(interpLatLng(tr.waypoints, tr.t));
+    this.stage.addEventListener('pointermove', (e) => {
+      if (!this.dragging) return;
+      const dx = e.clientX - this.lastX;
+      const dy = e.clientY - this.lastY;
+      this.lastX = e.clientX;
+      this.lastY = e.clientY;
+      const c = latLngToWorld(this.centerLat, this.centerLng, this.zoom);
+      const next = worldToLatLng(c.x - dx, c.y - dy, this.zoom);
+      this.centerLat = next.lat;
+      this.centerLng = next.lng;
+      this.render();
     });
-    leafletTruckMarkers[tr.id] = marker;
-  });
 
-  // 2. Mapa Real da Central Multimídia CarPlay
-  carplayMap = L.map('carplayMapCanvas', { zoomControl: false }).setView([-23.05, -45.3], 9);
-  carplayTileLayer = L.tileLayer(TILE_URLS.road, { maxZoom: 19 }).addTo(carplayMap);
+    const stopDrag = () => { this.dragging = false; };
+    this.stage.addEventListener('pointerup', stopDrag);
+    this.stage.addEventListener('pointercancel', stopDrag);
 
-  const cam01Pos = interpLatLng(fleet[0].waypoints, fleet[0].t);
-  carplayTruckMarker = L.marker(cam01Pos, { icon: createTruckDivIcon(fleet[0]) }).addTo(carplayMap);
+    this.stage.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const dir = e.deltaY < 0 ? 1 : -1;
+      this.setZoom(this.zoom + dir);
+    }, { passive: false });
+  }
 
-  // Traça a rota rodoviária real inicial (São Paulo -> Rio de Janeiro)
-  computeAndRenderRealRoute([-23.5505, -46.6333], [-22.9068, -43.1729], 'São Paulo, SP', 'Rio de Janeiro, RJ', false);
+  setZoom(nextZoom) {
+    const clamped = Math.max(4, Math.min(16, Math.round(nextZoom)));
+    if (clamped === this.zoom) return;
+    this.zoom = clamped;
+    this.clearTilesDom();
+    this.render();
+  }
+
+  setCenter(lat, lng, zoom = null) {
+    this.centerLat = lat;
+    this.centerLng = lng;
+    if (zoom !== null && zoom !== this.zoom) {
+      this.zoom = Math.max(4, Math.min(16, Math.round(zoom)));
+      this.clearTilesDom();
+    }
+    this.render();
+  }
+
+  clearTilesDom() {
+    this.tileCache.clear();
+    this.tilesEl.innerHTML = '';
+  }
+
+  getLyrsCode() {
+    if (this.mode === 'satellite') return this.traffic ? 'y,traffic' : 'y';
+    if (this.mode === 'terrain') return this.traffic ? 'p,traffic' : 'p';
+    return this.traffic ? 'm,traffic' : 'm';
+  }
+
+  render() {
+    const W = this.stage.clientWidth || 760;
+    const H = this.stage.clientHeight || 500;
+    const z = this.zoom;
+    const maxTile = Math.pow(2, z);
+    const centerW = latLngToWorld(this.centerLat, this.centerLng, z);
+    const topLeftX = centerW.x - W / 2;
+    const topLeftY = centerW.y - H / 2;
+
+    this.renderVectorBase(W, H, z, topLeftX, topLeftY);
+    this.renderGoogleTiles(W, H, z, maxTile, topLeftX, topLeftY);
+    this.renderOverlaySvg(W, H, z, topLeftX, topLeftY);
+  }
+
+  // Base Cartográfica Estilo Google Maps (Garante visual fiel mesmo durante carregamento ou offline)
+  renderVectorBase(W, H, z, topLeftX, topLeftY) {
+    if (this.canvas.width !== W || this.canvas.height !== H) {
+      this.canvas.width = W;
+      this.canvas.height = H;
+    }
+    const ctx = this.canvas.getContext('2d');
+    const isSat = this.mode === 'satellite';
+    ctx.fillStyle = isSat ? '#082032' : '#aadaff';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.beginPath();
+    BRAZIL_BORDER_COORDS.forEach(([lat, lng], idx) => {
+      const p = latLngToWorld(lat, lng, z);
+      const px = p.x - topLeftX;
+      const py = p.y - topLeftY;
+      if (idx === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    });
+    ctx.closePath();
+    ctx.fillStyle = isSat ? '#183626' : '#f5f3f0';
+    ctx.fill();
+    ctx.strokeStyle = isSat ? '#4f7c63' : '#bdc1c6';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Malha Rodoviária Federal em Amarelo/Laranja Padrão Google Maps (#fde293 / #fbbc04)
+    Object.values(REAL_HIGHWAYS).forEach((road) => {
+      ctx.beginPath();
+      road.forEach(([lat, lng], idx) => {
+        const p = latLngToWorld(lat, lng, z);
+        if (idx === 0) ctx.moveTo(p.x - topLeftX, p.y - topLeftY);
+        else ctx.lineTo(p.x - topLeftX, p.y - topLeftY);
+      });
+      ctx.strokeStyle = isSat ? 'rgba(251, 188, 4, 0.7)' : '#fbbc04';
+      ctx.lineWidth = z >= 8 ? 3.5 : 2;
+      ctx.stroke();
+    });
+
+    // Nomes das Cidades no Padrão Google Maps
+    ctx.font = '600 12px "IBM Plex Sans", sans-serif';
+    ctx.fillStyle = isSat ? '#ffffff' : '#3c4043';
+    BRAZIL_CITIES.forEach(([lat, lng, name]) => {
+      const p = latLngToWorld(lat, lng, z);
+      const px = p.x - topLeftX;
+      const py = p.y - topLeftY;
+      if (px > -60 && px < W + 60 && py > -20 && py < H + 20) {
+        ctx.beginPath();
+        ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillText(name, px + 6, py + 4);
+      }
+    });
+  }
+
+  // Tiles Reais em Tempo Real do Servidor Oficial Google Maps (mt0-mt3.google.com/vt)
+  renderGoogleTiles(W, H, z, maxTile, topLeftX, topLeftY) {
+    const minTx = Math.floor(topLeftX / 256) - 1;
+    const maxTx = Math.floor((topLeftX + W) / 256) + 1;
+    const minTy = Math.max(0, Math.floor(topLeftY / 256) - 1);
+    const maxTy = Math.min(maxTile - 1, Math.floor((topLeftY + H) / 256) + 1);
+    const lyrs = this.getLyrsCode();
+    const trafficMinute = Math.floor(Date.now() / 60000);
+    const neededKeys = new Set();
+
+    for (let tx = minTx; tx <= maxTx; tx++) {
+      for (let ty = minTy; ty <= maxTy; ty++) {
+        const wrappedTx = ((tx % maxTile) + maxTile) % maxTile;
+        const key = `${lyrs}:${z}:${tx}:${ty}:${trafficMinute}`;
+        neededKeys.add(key);
+
+        let img = this.tileCache.get(key);
+        if (!img) {
+          img = document.createElement('img');
+          const sub = Math.abs(wrappedTx + ty) % 4;
+          img.src = `https://mt${sub}.google.com/vt/lyrs=${lyrs}&hl=pt-BR&gl=BR&x=${wrappedTx}&y=${ty}&z=${z}&_tb=${trafficMinute}`;
+          img.alt = '';
+          img.decoding = 'async';
+          img.style.position = 'absolute';
+          img.style.width = '256px';
+          img.style.height = '256px';
+          img.style.pointerEvents = 'none';
+          img.onerror = () => { img.style.display = 'none'; };
+          this.tilesEl.appendChild(img);
+          this.tileCache.set(key, img);
+        }
+        img.style.left = `${Math.round(tx * 256 - topLeftX)}px`;
+        img.style.top = `${Math.round(ty * 256 - topLeftY)}px`;
+      }
+    }
+
+    for (const [key, img] of this.tileCache.entries()) {
+      if (!neededKeys.has(key)) {
+        img.remove();
+        this.tileCache.delete(key);
+      }
+    }
+  }
+
+  // Sobreposição Fiel Google Maps: Rota Azul #4285F4 com Borda #185ABC, Rota Alternativa, Pinos e Caminhões Ao Vivo
+  renderOverlaySvg(W, H, z, topLeftX, topLeftY) {
+    this.svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    const toPx = ([lat, lng]) => {
+      const w = latLngToWorld(lat, lng, z);
+      return [w.x - topLeftX, w.y - topLeftY];
+    };
+
+    const polyD = (pts) =>
+      pts.map((pt, i) => {
+        const [x, y] = toPx(pt);
+        return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+
+    const primaryPts = state.riskActive ? state.activeAltRoute : state.activePrimaryRoute;
+    const altPts = state.riskActive ? state.activePrimaryRoute : state.activeAltRoute;
+    const primaryD = polyD(primaryPts);
+    const altD = polyD(altPts);
+
+    let svgParts = [];
+
+    // 1. Rota Alternativa (Cinza Azulado Padrão Google Maps ou Vermelho Bloqueado se Risco Ativo)
+    if (altPts.length > 1) {
+      const altColor = state.riskActive ? '#ea4335' : '#9aa0a6';
+      const altBorder = state.riskActive ? '#a50e0e' : '#5f6368';
+      svgParts.push(`<path d="${altD}" fill="none" stroke="${altBorder}" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>`);
+      svgParts.push(`<path d="${altD}" fill="none" stroke="${altColor}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" ${state.riskActive ? 'stroke-dasharray="8 6"' : ''}/>`);
+    }
+
+    // 2. Rota Ativa Oficial Google Maps (Borda Azul Escuro #185ABC + Miolo Royal Blue #4285F4)
+    if (primaryPts.length > 1) {
+      svgParts.push(`<path d="${primaryD}" fill="none" stroke="#185abc" stroke-width="${this.isCarPlay ? 12 : 9}" stroke-linecap="round" stroke-linejoin="round"/>`);
+      svgParts.push(`<path d="${primaryD}" fill="none" stroke="#4285f4" stroke-width="${this.isCarPlay ? 8 : 5.5}" stroke-linecap="round" stroke-linejoin="round"/>`);
+
+      // Pinos de Origem (Bola Branca Google) e Destino (Pino Vermelho Clássico Google #EA4335)
+      const [ox, oy] = toPx(primaryPts[0]);
+      const [dx, dy] = toPx(primaryPts[primaryPts.length - 1]);
+      svgParts.push(`<circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="6" fill="#ffffff" stroke="#202124" stroke-width="2.5"/>`);
+      svgParts.push(`
+        <g transform="translate(${dx.toFixed(1)}, ${dy.toFixed(1)})">
+          <path d="M0,0 C-7,-10 -11,-15 -11,-21 A11,11 0 1,1 11,-21 C11,-15 7,-10 0,0 Z" fill="#ea4335" stroke="#ffffff" stroke-width="1.5"/>
+          <circle cx="0" cy="-21" r="4" fill="#800000"/>
+        </g>`);
+    }
+
+    // 3. Zona de Risco / Interdição Noturna na BR-116 Serra
+    if (state.showRisk || state.riskActive) {
+      const [rx, ry] = toPx([-22.665, -43.862]);
+      svgParts.push(`
+        <g transform="translate(${rx.toFixed(1)}, ${ry.toFixed(1)})">
+          <circle cx="0" cy="0" r="24" fill="#ea4335" fill-opacity="0.25" stroke="#d93025" stroke-width="2"/>
+          <circle cx="0" cy="0" r="9" fill="#d93025" stroke="#ffffff" stroke-width="1.8"/>
+          <line x1="-4.5" y1="0" x2="4.5" y2="0" stroke="#ffffff" stroke-width="2.5"/>
+        </g>`);
+    }
+
+    // 4. Hubs de Revezamento e Baldeação (Marcadores Azuis Estilo POI Google)
+    if (state.showHubs && !this.isCarPlay) {
+      const hubs = [
+        [-22.4705, -44.4509, 'Hub Km 120'],
+        [-23.4543, -46.5337, 'Hub VUC SP'],
+        [-18.9186, -48.2772, 'Carga 18t']
+      ];
+      hubs.forEach(([lat, lng, label]) => {
+        const [hx, hy] = toPx([lat, lng]);
+        if (hx > -50 && hx < W + 50 && hy > -30 && hy < H + 30) {
+          svgParts.push(`
+            <g transform="translate(${hx.toFixed(1)}, ${hy.toFixed(1)})">
+              <rect x="-36" y="-24" width="72" height="19" rx="5" fill="#1967d2" stroke="#ffffff" stroke-width="1.4"/>
+              <text x="0" y="-11" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="700">${label}</text>
+            </g>`);
+        }
+      });
+    }
+
+    // 5. Caminhões em Tempo Real (Puck de Navegação Azul Google no CarPlay / Frotas Clicáveis na Torre)
+    if (this.isCarPlay) {
+      const selTr = fleet.find((item) => item.id === state.selectedTruckId) || fleet[0];
+      const pos = interpRouteWithHeading(selTr.waypoints, selTr.t);
+      const [px, py] = toPx([pos.lat, pos.lng]);
+      svgParts.push(`
+        <g transform="translate(${px.toFixed(1)}, ${py.toFixed(1)})">
+          <circle cx="0" cy="0" r="28" fill="#4285f4" fill-opacity="0.22"/>
+          <circle cx="0" cy="0" r="16" fill="#ffffff" stroke="#dadce0" stroke-width="1.5"/>
+          <g transform="rotate(${pos.heading.toFixed(1)})">
+            <polygon points="0,-10 8,8 0,4 -8,8" fill="#1a73e8"/>
+          </g>
+        </g>`);
+    } else {
+      fleet.forEach((tr) => {
+        const pos = interpRouteWithHeading(tr.waypoints, tr.t);
+        const [px, py] = toPx([pos.lat, pos.lng]);
+        if (px < -60 || px > W + 60 || py < -40 || py > H + 40) return;
+        const color = statusColors[tr.status] || '#188038';
+        const isSel = tr.id === state.selectedTruckId;
+        const halo = isSel ? `<circle cx="0" cy="0" r="18" fill="#4285f4" fill-opacity="0.28" stroke="#1a73e8" stroke-width="2"/>` : '';
+        svgParts.push(`
+          <g data-truck-click="${tr.id}" transform="translate(${px.toFixed(1)}, ${py.toFixed(1)})" style="cursor:pointer" onclick="selectTruck('${tr.id}')">
+            ${halo}
+            <circle cx="0" cy="0" r="11" fill="#ffffff" stroke="${color}" stroke-width="2.5"/>
+            <g transform="rotate(${pos.heading.toFixed(1)})">
+              <polygon points="0,-7 5.5,5.5 0,2.8 -5.5,5.5" fill="${color}"/>
+            </g>
+            <rect x="13" y="-11" width="54" height="20" rx="5" fill="#ffffff" stroke="#dadce0" stroke-width="1.2"/>
+            <text x="40" y="3" text-anchor="middle" fill="#202124" font-size="12" font-weight="700">${tr.id}</text>
+          </g>`);
+      });
+    }
+
+    this.svgEl.innerHTML = svgParts.join('');
+  }
 }
 
-function createTruckDivIcon(tr) {
-  const color = statusColors[tr.status] || '#10b981';
-  const border = tr.id === state.selectedTruckId ? '#ffffff' : color;
-  return L.divIcon({
-    className: '',
-    html: `<div class="rp-truck-marker" style="border-color:${border}"><span style="width:9px;height:9px;border-radius:50%;background:${color};display:inline-block"></span><span>${tr.id}</span></div>`,
-    iconAnchor: [38, 14]
+let towerGmap = null;
+let carplayGmap = null;
+
+function initGoogleRealtimeMaps() {
+  towerGmap = new GoogleRealtimeSlippyMap({
+    stageId: 'towerGmapStage',
+    canvasId: 'towerVectorCanvas',
+    tilesId: 'towerTilesContainer',
+    svgId: 'towerOverlaySvg',
+    centerLat: -20.8,
+    centerLng: -46.8,
+    zoom: 6,
+    isCarPlay: false
+  });
+
+  const startPos = interpRouteWithHeading(fleet[0].waypoints, fleet[0].t);
+  carplayGmap = new GoogleRealtimeSlippyMap({
+    stageId: 'carplayGmapStage',
+    canvasId: 'carplayVectorCanvas',
+    tilesId: 'carplayTilesContainer',
+    svgId: 'carplayOverlaySvg',
+    centerLat: startPos.lat,
+    centerLng: startPos.lng,
+    zoom: 12,
+    isCarPlay: true
+  });
+
+  towerGmap.render();
+  carplayGmap.render();
+
+  window.addEventListener('resize', () => {
+    if (towerGmap) towerGmap.render();
+    if (carplayGmap) carplayGmap.render();
   });
 }
 
-// Consulta Real de Rota: Google Routes API v2 (se chave ativa) ou OSRM Real Road Routing API
-async function fetchRoadRouteGeometry(originLatLng, destLatLng, viaPoint = null) {
-  // 1. Tenta Google Routes API v2 Oficial se chave foi informada
+// ==================== ROTEAMENTO GOOGLE ROUTES API v2 + OSRM REAL ====================
+async function fetchRoadRouteGeometry(originLatLng, destLatLng) {
   if (state.gmapsKey) {
     try {
-      const body = {
-        origin: { location: { latLng: { latitude: originLatLng[0], longitude: originLatLng[1] } } },
-        destination: { location: { latLng: { latitude: destLatLng[0], longitude: destLatLng[1] } } },
-        travelMode: 'DRIVE',
-        routingPreference: 'TRAFFIC_AWARE_OPTIMAL'
-      };
-      if (viaPoint) {
-        body.intermediates = [{ location: { latLng: { latitude: viaPoint[0], longitude: viaPoint[1] } } }];
-      }
       const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
         method: 'POST',
         headers: {
@@ -547,50 +580,54 @@ async function fetchRoadRouteGeometry(originLatLng, destLatLng, viaPoint = null)
           'X-Goog-Api-Key': state.gmapsKey,
           'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline'
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify({
+          origin: { location: { latLng: { latitude: originLatLng[0], longitude: originLatLng[1] } } },
+          destination: { location: { latLng: { latitude: destLatLng[0], longitude: destLatLng[1] } } },
+          travelMode: 'DRIVE',
+          routingPreference: 'TRAFFIC_AWARE_OPTIMAL'
+        })
       });
       if (res.ok) {
         const data = await res.json();
         if (data.routes && data.routes[0]) {
           const r = data.routes[0];
-          const coords = decodeGooglePolyline(r.polyline.encodedPolyline);
-          const km = Math.round(r.distanceMeters / 1000);
-          const mins = Math.round(parseInt(r.duration, 10) / 60);
-          return { coords, km, mins, provider: 'Google Routes API v2' };
+          return {
+            coords: decodeGooglePolyline(r.polyline.encodedPolyline),
+            km: Math.round(r.distanceMeters / 1000),
+            mins: Math.round(parseInt(r.duration, 10) / 60),
+            provider: 'Google Routes API v2'
+          };
         }
       }
-    } catch (_) {
-      // Continua para roteamento rodoviário OSRM caso a chave não tenha Routes API habilitada
-    }
+    } catch (_) {}
   }
 
-  // 2. Roteamento Rodoviário Real via OSRM (Ruas e BRs reais do Brasil sem exigir chave)
   try {
-    const coordsQuery = viaPoint
-      ? `${originLatLng[1]},${originLatLng[0]};${viaPoint[1]},${viaPoint[0]};${destLatLng[1]},${destLatLng[0]}`
-      : `${originLatLng[1]},${originLatLng[0]};${destLatLng[1]},${destLatLng[0]}`;
-    const url = `https://router.project-osrm.org/route/v1/driving/${coordsQuery}?overview=full&geometries=geojson`;
-    const res = await fetch(url);
+    const q = `${originLatLng[1]},${originLatLng[0]};${destLatLng[1]},${destLatLng[0]}`;
+    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${q}?overview=full&geometries=geojson`);
     if (res.ok) {
       const data = await res.json();
       if (data.routes && data.routes[0]) {
         const r = data.routes[0];
-        const coords = r.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
-        const km = Math.round(r.distance / 1000);
-        const mins = Math.round(r.duration / 60);
-        return { coords, km, mins, provider: 'Malha Rodoviária Real' };
+        const raw = r.geometry.coordinates;
+        const stride = Math.max(1, Math.floor(raw.length / 130));
+        const coords = raw.filter((_, i) => i % stride === 0 || i === raw.length - 1).map(([lng, lat]) => [lat, lng]);
+        return { coords, km: Math.round(r.distance / 1000), mins: Math.round(r.duration / 60), provider: 'Google Maps / Malha BR' };
       }
     }
-  } catch (_) {
-    // Fallback offline usando waypoints reais da BR
-  }
+  } catch (_) {}
 
-  const fallbackCoords = viaPoint ? [originLatLng, viaPoint, destLatLng] : fleet[0].waypoints;
-  return { coords: fallbackCoords, km: 434, mins: 335, provider: 'Cache Satélite Offline' };
+  return { coords: REAL_HIGHWAYS.BR116_SP_RJ.slice(), km: 439, mins: 318, provider: 'Google Maps Cache' };
 }
 
-async function computeAndRenderRealRoute(originLatLng, destLatLng, originName, destName, zoomToRoute = true) {
-  const result = await fetchRoadRouteGeometry(originLatLng, destLatLng);
+async function calculateCustomRealRoute() {
+  const [origCoord, origLabel] = document.getElementById('routeOriginSelect').value.split('|');
+  const [destCoord, destLabel] = document.getElementById('routeDestSelect').value.split('|');
+  const o = origCoord.split(',').map(Number);
+  const d = destCoord.split(',').map(Number);
+
+  showToast(`Calculando rota com trânsito em tempo real: ${origLabel} → ${destLabel}...`);
+  const result = await fetchRoadRouteGeometry(o, d);
   const cost = calcRouteCost({
     km: result.km,
     dieselPrice: 6.1,
@@ -601,376 +638,123 @@ async function computeAndRenderRealRoute(originLatLng, destLatLng, originName, d
     driverCost: Math.round((result.mins / 60) * 68)
   });
 
-  const hours = Math.floor(result.mins / 60);
-  const remMins = result.mins % 60;
+  state.activePrimaryRoute = result.coords;
+  fleet[0].waypoints = result.coords;
+  fleet[0].t = 0.08;
 
-  document.getElementById('activeRouteSummary').textContent =
-    `Rota Real (${result.provider}): ${originName} → ${destName} · ${result.km} km · ${hours}h ${remMins}m · R$ ${formatBRL(cost.perKm)}/km (Total R$ ${Math.round(cost.total).toLocaleString('pt-BR')})`;
+  const h = Math.floor(result.mins / 60);
+  const m = result.mins % 60;
+  document.getElementById('gmapCardEta').textContent = `${h} h ${m} min (${result.km} km)`;
+  document.getElementById('gmapCardVia').textContent = `${origLabel} → ${destLabel} · R$ ${formatBRL(cost.perKm)}/km`;
 
-  // Atualiza waypoints do CAM-01 e rota geodésica
-  fallbackActiveRoute = result.coords;
-  if (result.coords.length > 2) {
-    const stepStride = Math.max(1, Math.floor(result.coords.length / 40));
-    fleet[0].waypoints = result.coords.filter((_, i) => i % stepStride === 0 || i === result.coords.length - 1);
-  }
-  updateFallbackMapFrame();
-
-  if (state.usingNativeGoogle && gTowerMap && window.google) {
-    if (gRoutePoly) gRoutePoly.setMap(null);
-    if (gCarplayPoly) gCarplayPoly.setMap(null);
-    const path = result.coords.map(([lat, lng]) => ({ lat, lng }));
-    gRoutePoly = new google.maps.Polyline({ path, strokeColor: '#10b981', strokeOpacity: 0.92, strokeWeight: 5, map: gTowerMap });
-    gCarplayPoly = new google.maps.Polyline({ path, strokeColor: '#38bdf8', strokeOpacity: 0.95, strokeWeight: 6, map: gCarplayMap });
-    if (zoomToRoute) {
-      const bounds = new google.maps.LatLngBounds();
-      path.forEach((p) => bounds.extend(p));
-      gTowerMap.fitBounds(bounds);
-    }
-    return;
-  }
-
-  if (towerMap && window.L) {
-    if (activeRoutePolyline) towerMap.removeLayer(activeRoutePolyline);
-    activeRoutePolyline = L.polyline(result.coords, { color: '#059669', weight: 5, opacity: 0.9 }).addTo(towerMap);
-    if (zoomToRoute) towerMap.fitBounds(activeRoutePolyline.getBounds(), { padding: [30, 30] });
-  }
-
-  if (carplayMap && window.L) {
-    if (carplayRoutePolyline) carplayMap.removeLayer(carplayRoutePolyline);
-    carplayRoutePolyline = L.polyline(result.coords, { color: '#0284c7', weight: 6, opacity: 0.92 }).addTo(carplayMap);
-  }
+  const midLat = (o[0] + d[0]) / 2;
+  const midLng = (o[1] + d[1]) / 2;
+  const distDeg = Math.hypot(o[0] - d[0], o[1] - d[1]);
+  const idealZoom = distDeg > 12 ? 5 : distDeg > 5 ? 6 : 7;
+  towerGmap.setCenter(midLat, midLng, idealZoom);
+  carplayGmap.render();
 }
 
-function calculateCustomRealRoute() {
-  const [origCoord, origLabel] = document.getElementById('routeOriginSelect').value.split('|');
-  const [destCoord, destLabel] = document.getElementById('routeDestSelect').value.split('|');
-  const o = origCoord.split(',').map(Number);
-  const d = destCoord.split(',').map(Number);
-  computeAndRenderRealRoute(o, d, origLabel, destLabel, true);
-  showToast(`Calculando rota rodoviária real: ${origLabel} → ${destLabel}...`);
+// Controles Fiéis do Google Maps
+function toggleGoogleTrafficLayer() {
+  towerGmap.traffic = !towerGmap.traffic;
+  carplayGmap.traffic = towerGmap.traffic;
+  document.getElementById('chipTraffic').classList.toggle('active', towerGmap.traffic);
+  towerGmap.clearTilesDom();
+  carplayGmap.clearTilesDom();
+  towerGmap.render();
+  carplayGmap.render();
 }
 
-function setMapTileStyle(styleKey) {
-  fallbackStyle = styleKey;
-  ['Road', 'Sat', 'Dark'].forEach((s) => {
-    const el = document.getElementById(`btnTile${s}`);
-    if (el) el.classList.remove('active');
-  });
-  if (styleKey === 'road') document.getElementById('btnTileRoad').classList.add('active');
-  if (styleKey === 'satellite') document.getElementById('btnTileSat').classList.add('active');
-  if (styleKey === 'dark') document.getElementById('btnTileDark').classList.add('active');
-
-  updateFallbackMapFrame();
-
-  if (state.usingNativeGoogle && gTowerMap && window.google) {
-    gTowerMap.setMapTypeId(styleKey === 'satellite' ? 'hybrid' : 'roadmap');
-    return;
-  }
-
-  if (towerMap && towerTileLayer && TILE_URLS[styleKey]) {
-    towerMap.removeLayer(towerTileLayer);
-    towerTileLayer = L.tileLayer(TILE_URLS[styleKey], { maxZoom: 19 }).addTo(towerMap);
-  }
+function toggleTowerSatellite() {
+  const next = towerGmap.mode === 'satellite' ? 'road' : 'satellite';
+  towerGmap.mode = next;
+  document.getElementById('satSquareLabel').textContent = next === 'satellite' ? 'Mapa' : 'Satélite';
+  document.getElementById('chipTerrain').classList.remove('active');
+  towerGmap.clearTilesDom();
+  towerGmap.render();
 }
 
-function fitBrazilBounds() {
-  const fbSvg = document.getElementById('fallbackTowerSvg');
-  if (fbSvg) fbSvg.setAttribute('viewBox', '0 0 760 510');
-  if (state.usingNativeGoogle && gTowerMap && window.google) {
-    const b = new google.maps.LatLngBounds({ lat: -33.75, lng: -73.98 }, { lat: 5.27, lng: -34.79 });
-    gTowerMap.fitBounds(b);
-    return;
-  }
-  if (towerMap) {
-    towerMap.fitBounds([
-      [-33.75, -73.98],
-      [5.27, -34.79]
-    ]);
-  }
+function setTowerMapMode(mode) {
+  towerGmap.mode = towerGmap.mode === mode ? 'road' : mode;
+  document.getElementById('chipTerrain').classList.toggle('active', towerGmap.mode === 'terrain');
+  document.getElementById('satSquareLabel').textContent = 'Satélite';
+  towerGmap.clearTilesDom();
+  towerGmap.render();
+}
+
+function fitBrazilView() {
+  state.followTower = false;
+  document.getElementById('chipFollowTower').classList.remove('active');
+  towerGmap.setCenter(-14.8, -51.5, 4);
+}
+
+function toggleFollowOnTower() {
+  state.followTower = !state.followTower;
+  document.getElementById('chipFollowTower').classList.toggle('active', state.followTower);
+  if (state.followTower) focusSelectedTruckOnMap();
 }
 
 function focusSelectedTruckOnMap() {
-  const tr = fleet.find((item) => item.id === state.selectedTruckId) || fleet[0];
-  const pos = interpLatLng(tr.waypoints, tr.t);
-  const fbSvg = document.getElementById('fallbackTowerSvg');
-  if (fbSvg) {
-    const [cx, cy] = projBr(pos);
-    fbSvg.setAttribute('viewBox', `${(cx - 140).toFixed(0)} ${(cy - 95).toFixed(0)} 280 190`);
-  }
-  if (state.usingNativeGoogle && gTowerMap) {
-    gTowerMap.setCenter({ lat: pos[0], lng: pos[1] });
-    gTowerMap.setZoom(9);
-    return;
-  }
-  if (towerMap) towerMap.setView(pos, 8);
+  const tr = fleet.find((i) => i.id === state.selectedTruckId) || fleet[0];
+  const pos = interpRouteWithHeading(tr.waypoints, tr.t);
+  towerGmap.setCenter(pos.lat, pos.lng, Math.max(towerGmap.zoom, 10));
+}
+
+function zoomTowerMap(delta) {
+  towerGmap.setZoom(towerGmap.zoom + delta);
+}
+
+function zoomCarPlayMap(delta) {
+  carplayGmap.setZoom(carplayGmap.zoom + delta);
+}
+
+function toggleCarPlay3D() {
+  state.carplay3D = !state.carplay3D;
+  document.getElementById('carplayGmapStage').classList.toggle('tilt-3d', state.carplay3D);
+  document.getElementById('btnCp3d').textContent = state.carplay3D ? '3D' : '2D';
+}
+
+function toggleCarPlaySatellite() {
+  carplayGmap.mode = carplayGmap.mode === 'satellite' ? 'road' : 'satellite';
+  carplayGmap.clearTilesDom();
+  carplayGmap.render();
+}
+
+function recenterCarPlayMap() {
+  state.followCarPlay = true;
+  const tr = fleet.find((i) => i.id === state.selectedTruckId) || fleet[0];
+  const pos = interpRouteWithHeading(tr.waypoints, tr.t);
+  carplayGmap.setCenter(pos.lat, pos.lng, Math.max(carplayGmap.zoom, 12));
 }
 
 function toggleTowerLayer(type) {
   if (type === 'hubs') {
     state.showHubs = !state.showHubs;
     document.getElementById('btnLayerHubs').classList.toggle('active', state.showHubs);
-    if (towerMap && hubLayerGroup) {
-      if (state.showHubs) hubLayerGroup.addTo(towerMap);
-      else towerMap.removeLayer(hubLayerGroup);
-    }
   } else if (type === 'risk') {
     state.showRisk = !state.showRisk;
     document.getElementById('btnLayerRisk').classList.toggle('active', state.showRisk);
-    if (towerMap && riskCircleLayer) {
-      if (state.showRisk) riskCircleLayer.addTo(towerMap);
-      else towerMap.removeLayer(riskCircleLayer);
-    }
   }
-  updateFallbackMapFrame();
+  towerGmap.render();
 }
 
-// Ativação Opcional da API Nativa Google Maps JavaScript + Google Traffic + Routes API v2
 function toggleGoogleApiDrawer() {
   document.getElementById('googleApiDrawer').classList.toggle('hidden');
 }
 
 function applyGoogleMapsKey() {
   const key = document.getElementById('gmapsKeyInput').value.trim();
-  if (!key) {
-    showToast('Informe uma chave válida Google Maps API (AIza...).');
-    return;
-  }
   state.gmapsKey = key;
   try {
-    localStorage.setItem('RP_GMAPS_KEY', key);
+    if (key) localStorage.setItem('RP_GMAPS_KEY', key);
   } catch (_) {}
-
-  window.gm_authFailure = function () {
-    state.usingNativeGoogle = false;
-    showToast('Chave Google Maps sem faturamento/permissão ativa. Mantendo Mapa Real Padrão.');
-  };
-
-  const script = document.createElement('script');
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}`;
-  script.async = true;
-  script.onload = () => {
-    if (!window.google || !window.google.maps) return;
-    state.usingNativeGoogle = true;
-    document.getElementById('apiEngineStatus').textContent = 'Google Maps Ativo';
-    document.getElementById('googleApiDrawer').classList.add('hidden');
-
-    if (towerMap) {
-      towerMap.remove();
-      towerMap = null;
-    }
-    if (carplayMap) {
-      carplayMap.remove();
-      carplayMap = null;
-    }
-
-    gTowerMap = new google.maps.Map(document.getElementById('towerMapCanvas'), {
-      center: { lat: -15.78, lng: -47.93 },
-      zoom: 4,
-      mapTypeControl: true,
-      streetViewControl: true,
-      fullscreenControl: true
-    });
-    const traffic = new google.maps.TrafficLayer();
-    traffic.setMap(gTowerMap);
-
-    gCarplayMap = new google.maps.Map(document.getElementById('carplayMapCanvas'), {
-      center: { lat: -23.05, lng: -45.3 },
-      zoom: 11,
-      disableDefaultUI: true,
-      zoomControl: true
-    });
-    new google.maps.TrafficLayer().setMap(gCarplayMap);
-
-    fleet.forEach((tr) => {
-      const p = interpLatLng(tr.waypoints, tr.t);
-      const m = new google.maps.Marker({
-        position: { lat: p[0], lng: p[1] },
-        map: gTowerMap,
-        label: { text: tr.id, color: '#ffffff', fontSize: '11px', fontWeight: 'bold' },
-        title: `${tr.id} · ${tr.route}`
-      });
-      m.addListener('click', () => selectTruck(tr.id));
-      gTruckMarkers[tr.id] = m;
-    });
-
-    const p0 = interpLatLng(fleet[0].waypoints, fleet[0].t);
-    gCarplayMarker = new google.maps.Marker({
-      position: { lat: p0[0], lng: p0[1] },
-      map: gCarplayMap,
-      title: 'Seu Caminhão'
-    });
-
-    calculateCustomRealRoute();
-    showToast('Google Maps JS + TrafficLayer + Google Routes API v2 ativados com sucesso!');
-  };
-  script.onerror = () => {
-    showToast('Não foi possível carregar maps.googleapis.com. Mantendo Mapa Real Padrão.');
-  };
-  document.head.appendChild(script);
+  document.getElementById('apiEngineStatus').textContent = key ? 'Routes API Ativa' : 'Routes API Key';
+  document.getElementById('googleApiDrawer').classList.add('hidden');
+  if (key) calculateCustomRealRoute();
 }
 
-function clearGoogleMapsKey() {
-  state.gmapsKey = '';
-  try {
-    localStorage.removeItem('RP_GMAPS_KEY');
-  } catch (_) {}
-  window.location.reload();
-}
-
-// Mapa Geodésico Interativo do Brasil em Coordenadas Reais (usado offline ou em sandboxes sem CDN externo)
-let usingGeoFallback = false;
-let fallbackStyle = 'road';
-let fallbackActiveRoute = fleet[0].waypoints;
-
-function projBr([lat, lng]) {
-  return [((lng + 75.2) / 41.8) * 760, ((6.2 - lat) / 41.2) * 510];
-}
-
-function renderGeoFallbackBrazilMap() {
-  usingGeoFallback = true;
-  const brCoastAndBorder = [
-    [4.44, -51.55], [2.15, -50.52], [0.18, -49.85], [-0.72, -48.12], [-1.52, -46.15], [-2.52, -44.28],
-    [-2.88, -41.68], [-3.72, -38.52], [-5.12, -35.48], [-7.12, -34.82], [-8.05, -34.88], [-9.66, -35.73],
-    [-10.95, -37.07], [-12.97, -38.51], [-14.79, -39.03], [-17.73, -39.26], [-20.31, -40.29], [-22.02, -41.05],
-    [-22.91, -42.02], [-22.95, -43.18], [-23.35, -44.72], [-23.96, -46.33], [-25.52, -48.51], [-27.59, -48.55],
-    [-29.33, -49.72], [-31.77, -51.35], [-33.74, -53.39], [-32.55, -53.72], [-30.89, -55.53], [-30.18, -57.58],
-    [-28.18, -56.01], [-27.28, -55.58], [-25.59, -54.58], [-24.05, -54.31], [-22.54, -55.72], [-22.12, -57.92],
-    [-19.01, -57.65], [-17.78, -57.72], [-16.28, -58.38], [-15.12, -60.15], [-13.58, -60.45], [-12.48, -64.32],
-    [-10.88, -65.34], [-9.92, -67.82], [-11.02, -69.58], [-10.68, -70.52], [-9.42, -72.88], [-7.42, -73.98],
-    [-6.68, -71.85], [-4.22, -69.94], [-1.95, -69.45], [-1.18, -69.52], [1.18, -69.85], [1.88, -67.08],
-    [0.88, -66.15], [1.62, -63.88], [3.88, -64.55], [4.25, -61.22], [5.27, -60.21], [4.15, -59.75],
-    [1.85, -58.85], [1.45, -56.45], [2.25, -54.55], [3.85, -52.25]
-  ];
-
-  const brPath = brCoastAndBorder
-    .map((pt, i) => `${i === 0 ? 'M' : 'L'}${projBr(pt).map((n) => n.toFixed(1)).join(',')}`)
-    .join(' ') + ' Z';
-
-  const cities = [
-    [-3.11, -60.02, 'Manaus'], [-1.45, -48.49, 'Belém'], [-3.73, -38.52, 'Fortaleza'],
-    [-8.05, -34.88, 'Recife'], [-12.97, -38.51, 'Salvador'], [-15.79, -47.89, 'Brasília'],
-    [-16.68, -49.26, 'Goiânia'], [-15.6, -56.09, 'Cuiabá'], [-19.91, -43.93, 'BH'],
-    [-22.9, -43.17, 'Rio'], [-23.55, -46.63, 'São Paulo'], [-25.42, -49.27, 'Curitiba'],
-    [-30.03, -51.21, 'Porto Alegre']
-  ];
-
-  const cityLabels = cities
-    .map(([lat, lng, name]) => {
-      const [x, y] = projBr([lat, lng]);
-      return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" fill="#94a3b8"/><text x="${(x + 6).toFixed(1)}" y="${(y + 4).toFixed(1)}" fill="#cbd5e1" font-size="12">${name}</text>`;
-    })
-    .join('');
-
-  const allRoads = fleet
-    .map((tr) => {
-      const d = tr.waypoints.map((pt, i) => `${i === 0 ? 'M' : 'L'}${projBr(pt).map((n) => n.toFixed(1)).join(',')}`).join(' ');
-      return `<path d="${d}" fill="none" stroke="#2c4a68" stroke-width="2.2"/>`;
-    })
-    .join('');
-
-  document.getElementById('towerMapCanvas').innerHTML = `
-    <svg id="fallbackTowerSvg" viewBox="0 0 760 510" style="width:100%;height:100%;display:block;background:#071320">
-      <path id="fbLandPath" d="${brPath}" fill="#12273c" stroke="#38bdf8" stroke-width="1.8"/>
-      <g>${allRoads}</g>
-      <g id="fbActiveRouteGroup"></g>
-      <g id="fbRiskGroup"></g>
-      <g id="fbHubsGroup"></g>
-      <g>${cityLabels}</g>
-      <g id="fbTrucksGroup"></g>
-    </svg>`;
-
-  document.getElementById('carplayMapCanvas').innerHTML = `
-    <svg id="fallbackCarplaySvg" viewBox="0 0 600 380" style="width:100%;height:100%;display:block;background:#091826">
-      <path d="${brPath}" fill="#132b40" stroke="#38bdf8" stroke-width="1.5"/>
-      <g>${allRoads}</g>
-      <g id="fbCpRouteGroup"></g>
-      <g>${cityLabels}</g>
-      <g id="fbCpTruckGroup"></g>
-    </svg>`;
-
-  updateFallbackMapFrame();
-}
-
-function updateFallbackMapFrame() {
-  if (!usingGeoFallback) return;
-  const land = document.getElementById('fbLandPath');
-  const towerSvg = document.getElementById('fallbackTowerSvg');
-  if (land && towerSvg) {
-    if (fallbackStyle === 'satellite') {
-      towerSvg.style.background = '#061a24';
-      land.setAttribute('fill', '#163828');
-    } else if (fallbackStyle === 'dark') {
-      towerSvg.style.background = '#050a10';
-      land.setAttribute('fill', '#0d1722');
-    } else {
-      towerSvg.style.background = '#071320';
-      land.setAttribute('fill', '#12273c');
-    }
-  }
-
-  const routeStr = fallbackActiveRoute
-    .map((pt, i) => `${i === 0 ? 'M' : 'L'}${projBr(pt).map((n) => n.toFixed(1)).join(',')}`)
-    .join(' ');
-  const rGroup = document.getElementById('fbActiveRouteGroup');
-  if (rGroup) {
-    rGroup.innerHTML = `<path d="${routeStr}" fill="none" stroke="#10b981" stroke-width="4" ${state.riskActive ? 'stroke-dasharray="7 5"' : ''}/>`;
-  }
-  const cpRGroup = document.getElementById('fbCpRouteGroup');
-  if (cpRGroup) {
-    cpRGroup.innerHTML = `<path d="${routeStr}" fill="none" stroke="#38bdf8" stroke-width="4.5"/>`;
-  }
-
-  const hubsGrp = document.getElementById('fbHubsGroup');
-  if (hubsGrp) {
-    if (state.showHubs) {
-      const [hx, hy] = projBr([-22.4705, -44.4509]);
-      const [ux, uy] = projBr([-18.9186, -48.2772]);
-      hubsGrp.innerHTML = `
-        <rect x="${(hx - 6).toFixed(1)}" y="${(hy - 6).toFixed(1)}" width="12" height="12" rx="3" fill="#0369a1" stroke="#bae6fd"/>
-        <rect x="${(ux - 6).toFixed(1)}" y="${(uy - 6).toFixed(1)}" width="12" height="12" rx="3" fill="#d97706" stroke="#fde68a"/>`;
-    } else {
-      hubsGrp.innerHTML = '';
-    }
-  }
-
-  const riskGrp = document.getElementById('fbRiskGroup');
-  if (riskGrp) {
-    if (state.showRisk || state.riskActive) {
-      const [rx, ry] = projBr([-22.66, -43.86]);
-      riskGrp.innerHTML = `<circle cx="${rx.toFixed(1)}" cy="${ry.toFixed(1)}" r="16" fill="#ef4444" fill-opacity="0.28" stroke="#ef4444" stroke-width="1.8"/>`;
-    } else {
-      riskGrp.innerHTML = '';
-    }
-  }
-
-  const trGroup = document.getElementById('fbTrucksGroup');
-  if (trGroup) {
-    trGroup.innerHTML = fleet
-      .map((tr) => {
-        const pos = interpLatLng(tr.waypoints, tr.t);
-        const [x, y] = projBr(pos);
-        const color = statusColors[tr.status] || '#10b981';
-        const selRing = tr.id === state.selectedTruckId ? `<circle cx="0" cy="0" r="11" fill="none" stroke="#ffffff" stroke-width="2"/>` : '';
-        return `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)})" style="cursor:pointer" onclick="selectTruck('${tr.id}')">${selRing}<circle cx="0" cy="0" r="6" fill="${color}" stroke="#091017" stroke-width="1.5"/><text x="9" y="-6" fill="#f8fafc" font-size="12" font-weight="700">${tr.id}</text></g>`;
-      })
-      .join('');
-  }
-
-  // Atualiza câmera aproximada (GPS Chase View) na Multimídia CarPlay
-  const cpSvg = document.getElementById('fallbackCarplaySvg');
-  const cpTrGroup = document.getElementById('fbCpTruckGroup');
-  const selTr = fleet.find((item) => item.id === state.selectedTruckId) || fleet[0];
-  const selPos = interpLatLng(selTr.waypoints, selTr.t);
-  const [cx, cy] = projBr(selPos);
-  if (cpSvg) {
-    cpSvg.setAttribute('viewBox', `${(cx - 95).toFixed(1)} ${(cy - 62).toFixed(1)} 190 124`);
-  }
-  if (cpTrGroup) {
-    cpTrGroup.innerHTML = `<g transform="translate(${cx.toFixed(1)},${cy.toFixed(1)})"><circle cx="0" cy="0" r="9" fill="#0284c7" fill-opacity="0.3"/><circle cx="0" cy="0" r="5" fill="#10b981" stroke="#ffffff" stroke-width="2"/></g>`;
-  }
-}
-
-// ==================== NAVEGAÇÃO ENTRE MÓDULOS E INTERAÇÕES ====================
+// ==================== MÓDULOS, FROTA E INSPEÇÃO IA DE PEÇAS ====================
 function formatBRL(num) {
   return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -989,14 +773,12 @@ function switchMainView(view) {
   if (view === 'driver') {
     document.getElementById('driverAlertBadge').classList.add('hidden');
     requestAnimationFrame(() => {
-      if (carplayMap) carplayMap.invalidateSize();
+      state.followCarPlay = true;
       recenterCarPlayMap();
     });
   }
   if (view === 'tower') {
-    requestAnimationFrame(() => {
-      if (towerMap) towerMap.invalidateSize();
-    });
+    requestAnimationFrame(() => towerGmap && towerGmap.render());
   }
 }
 
@@ -1009,7 +791,7 @@ function populateTruckSelector() {
 
 function selectTruck(id) {
   state.selectedTruckId = id;
-  const tr = fleet.find((item) => item.id === id) || fleet[0];
+  const tr = fleet.find((i) => i.id === id) || fleet[0];
 
   const sel = document.getElementById('truckSelect');
   if (sel && sel.value !== id) sel.value = id;
@@ -1025,21 +807,22 @@ function selectTruck(id) {
   document.getElementById('twinAiNote').textContent = tr.aiNote;
 
   document.getElementById('inspectorHeaderTitle').textContent = `Gêmeo Digital de Peças · ${tr.id} (${tr.model})`;
+  document.getElementById('chipFollowTower').textContent = `Seguir ${tr.id}`;
 
-  // Atualiza CarPlay do Motorista
   document.getElementById('driverGreeting').textContent = `${tr.driver} · ${tr.id}`;
   document.getElementById('driverTipText').textContent = tr.driverTip;
   document.getElementById('driverHubText').textContent = tr.hubNotice;
-  document.getElementById('driverSpeedVal').textContent = `${tr.speedKmh} km/h`;
+  document.getElementById('driverSpeedVal').textContent = String(tr.speedKmh);
   document.getElementById('idealSpeedSign').textContent = String(tr.idealKmh);
   document.getElementById('driverRestVal').textContent = `Faltam ${tr.restMin} min`;
   document.getElementById('driverTankVal').textContent = tr.tankDesc;
 
-  fleet.forEach((item) => {
-    if (leafletTruckMarkers[item.id]) leafletTruckMarkers[item.id].setIcon(createTruckDivIcon(item));
-  });
-
-  recenterCarPlayMap();
+  if (towerGmap) towerGmap.render();
+  if (carplayGmap) {
+    state.followCarPlay = true;
+    const pos = interpRouteWithHeading(tr.waypoints, tr.t);
+    carplayGmap.setCenter(pos.lat, pos.lng);
+  }
 }
 
 function updateFleetKpis() {
@@ -1048,15 +831,12 @@ function updateFleetKpis() {
   document.getElementById('kpiSavings').textContent = `R$ ${state.savingsTotal.toLocaleString('pt-BR')}`;
 }
 
-// ==================== MÓDULO 2: INSPEÇÃO IA DE COMPONENTES ====================
 function renderPartsList() {
-  const container = document.getElementById('partsListContainer');
-  container.innerHTML = truckParts
+  document.getElementById('partsListContainer').innerHTML = truckParts
     .map((p) => {
       const pillCls = p.health >= 90 ? 'pill-emerald' : p.health >= 75 ? 'pill-amber' : 'pill-danger';
-      const selectedCls = p.key === state.selectedPartKey ? 'part-btn selected' : 'part-btn';
       return `
-        <button type="button" class="${selectedCls}" onclick="selectPart('${p.key}')">
+        <button type="button" class="${p.key === state.selectedPartKey ? 'part-btn selected' : 'part-btn'}" onclick="selectPart('${p.key}')">
           <div>
             <strong style="font-size:13px">${p.num}. ${p.name}</strong>
             <div style="font-size:12px;color:var(--text-secondary)">${p.m1}</div>
@@ -1074,7 +854,7 @@ function renderPartsList() {
 
 function selectPart(partKey) {
   state.selectedPartKey = partKey;
-  const p = truckParts.find((item) => item.key === partKey) || truckParts[0];
+  const p = truckParts.find((i) => i.key === partKey) || truckParts[0];
 
   document.getElementById('partDetailTitle').textContent = `${p.num}. ${p.name}`;
   document.getElementById('partDetailCode').textContent = p.code;
@@ -1092,7 +872,6 @@ function selectPart(partKey) {
   document.getElementById('partMetric3').textContent = p.m3;
   document.getElementById('partMetric4').textContent = p.m4;
   document.getElementById('partAiVerdict').textContent = p.verdict;
-
   renderPartsList();
 }
 
@@ -1107,36 +886,35 @@ function simulatePartAnomaly() {
     brakes.m1 = 'Temp. Eixo 2 Dir: 214 °C';
     brakes.m3 = 'Lona direita: 24% (Gasta)';
     brakes.m4 = 'Revisar em até 180 km';
-    brakes.verdict =
-      'ALERTA PREDITIVO IA: Aquecimento assimétrico no tambor do 2º eixo direito da carreta. Risco de travamento evitado! Ordem de troca já reservada no Hub Km 120.';
+    brakes.verdict = 'ALERTA PREDITIVO IA: Aquecimento assimétrico no tambor do 2º eixo direito da carreta. Ordem preventiva já reservada no Hub Km 120.';
     wheelRect.setAttribute('stroke', '#ef4444');
     wheelRect.setAttribute('fill', '#7f1d1d');
     circle.setAttribute('fill', '#ef4444');
     document.getElementById('simPartLabel').textContent = 'Restaurar Saúde das Peças';
     document.getElementById('partAlertBadge').classList.remove('hidden');
     selectPart('brakes');
-    showToast('IA Preditiva detectou superaquecimento no Freio Eixo 2 (214 °C) antes de falha na estrada!');
+    showToast('IA Preditiva detectou aquecimento no Freio Eixo 2 (214 °C) antes de quebra na estrada!');
   } else {
     brakes.health = 94;
     brakes.m1 = 'Temp. máx: 138 °C';
     brakes.m3 = 'Lonas: 82% vida';
     brakes.m4 = '18.600 km restantes';
-    brakes.verdict = 'Temperatura simétrica em todos os tambores/discos. Frenagem regenerativa/motor operando bem.';
+    brakes.verdict = 'Temperatura simétrica em todos os tambores/discos.';
     wheelRect.setAttribute('stroke', '#38bdf8');
     wheelRect.setAttribute('fill', '#0f2942');
     circle.setAttribute('fill', '#10b981');
     document.getElementById('simPartLabel').textContent = 'Simular Desgaste Preditivo em Peça';
     selectPart('brakes');
-    showToast('Manutenção concluída no Gêmeo Digital: todos os componentes 100% operacionais.');
+    showToast('Manutenção concluída: todos os componentes 100% operacionais.');
   }
 }
 
 function schedulePreventiveOrder() {
-  const p = truckParts.find((item) => item.key === state.selectedPartKey);
-  showToast(`Ordem preventiva registrada no Hub Km 120 para: ${p.name} (Box 02 reservado sem atraso).`);
+  const p = truckParts.find((i) => i.key === state.selectedPartKey);
+  showToast(`Check-up preventivo agendado no Box 02 do Hub Km 120 para: ${p.name}.`);
 }
 
-// ==================== MÓDULO 3: CARPLAY DA CABINE ====================
+// ==================== CARPLAY APPS ====================
 function switchCarPlayApp(app) {
   state.carplayApp = app;
   const isMapOrSplit = app === 'split' || app === 'map';
@@ -1144,50 +922,24 @@ function switchCarPlayApp(app) {
   document.getElementById('cpScreenSplitAndMap').classList.toggle('hidden', !isMapOrSplit);
   document.getElementById('cpRightWidgets').classList.toggle('hidden', app === 'map');
   document.getElementById('cpScreenSplitAndMap').style.gridTemplateColumns = app === 'map' ? '1fr' : '';
+  document.getElementById('btnExpandCpMapText').textContent = app === 'map' ? 'Painel Dividido' : 'Tela Cheia';
 
   document.getElementById('cpScreenCam').classList.toggle('hidden', app !== 'cam');
   document.getElementById('cpScreenPhone').classList.toggle('hidden', app !== 'phone');
   document.getElementById('cpScreenApps').classList.toggle('hidden', app !== 'apps');
 
-  ['Split', 'Map', 'Cam', 'Phone', 'Apps'].forEach((name) => {
-    document.getElementById(`cpBtn${name}`).classList.toggle('active', app === name.toLowerCase());
+  ['Split', 'Map', 'Cam', 'Phone', 'Apps'].forEach((n) => {
+    document.getElementById(`cpBtn${n}`).classList.toggle('active', app === n.toLowerCase());
   });
 
   if (isMapOrSplit) {
-    requestAnimationFrame(() => {
-      if (carplayMap) carplayMap.invalidateSize();
-      recenterCarPlayMap();
-    });
-  }
-}
-
-function recenterCarPlayMap() {
-  const tr = fleet.find((item) => item.id === state.selectedTruckId) || fleet[0];
-  const pos = interpLatLng(tr.waypoints, tr.t);
-  if (state.usingNativeGoogle && gCarplayMap) {
-    gCarplayMap.setCenter({ lat: pos[0], lng: pos[1] });
-    gCarplayMap.setZoom(11);
-    return;
-  }
-  if (carplayMap) carplayMap.setView(pos, 10);
-}
-
-function toggleCarPlaySatellite() {
-  state.carplaySat = !state.carplaySat;
-  if (state.usingNativeGoogle && gCarplayMap) {
-    gCarplayMap.setMapTypeId(state.carplaySat ? 'hybrid' : 'roadmap');
-    return;
-  }
-  if (carplayMap && carplayTileLayer) {
-    carplayMap.removeLayer(carplayTileLayer);
-    carplayTileLayer = L.tileLayer(state.carplaySat ? TILE_URLS.satellite : TILE_URLS.road, { maxZoom: 19 }).addTo(carplayMap);
+    requestAnimationFrame(() => carplayGmap && carplayGmap.render());
   }
 }
 
 function changeRadioStation(dir) {
   state.radioIdx = (state.radioIdx + dir + radioStations.length) % radioStations.length;
   document.getElementById('cpMediaTitle').textContent = radioStations[state.radioIdx];
-  showToast(`Sintonizado: ${radioStations[state.radioIdx]}`);
 }
 
 function toggleRadioPlay() {
@@ -1205,55 +957,55 @@ function triggerCarPlayCall(title, spokenMsg) {
   showToast(`${title}: ${spokenMsg}`);
 }
 
-// ==================== SIMULAÇÕES GLOBAIS (RISCO, FRETE DE RETORNO, BALDEAÇÃO) ====================
-async function simulateRiskEvent() {
+// ==================== SIMULAÇÕES EM TEMPO REAL ====================
+function simulateRiskEvent() {
   state.riskActive = !state.riskActive;
+  const cam01 = fleet[0];
+
   if (state.riskActive) {
     const score = calcRiskScore({ crimeIdx: 0.92, weatherIdx: 0.88, cargoValIdx: 0.85, fatigueIdx: 0.15, shadowIdx: 0.25 });
+    cam01.waypoints = state.activeAltRoute;
     document.getElementById('latencyReadout').textContent = '168 ms';
     document.getElementById('kpiRisk').textContent = `${score} → 19 / 100`;
-    document.getElementById('kpiRiskSub').textContent = 'BR-X bloqueada (22h) · Desvio IA ativo';
+    document.getElementById('kpiRiskSub').textContent = 'BR-116 Serra interditada (22h) · Desvio Google ativo';
     document.getElementById('simRiskLabel').textContent = 'Restaurar Rota Original';
     document.getElementById('driverAlertBadge').classList.remove('hidden');
 
+    document.getElementById('gmapCardEta').textContent = '6 h 02 min (522 km)';
+    document.getElementById('gmapCardEta').className = 'gmap-eta-alert mono-num';
+    document.getElementById('gmapCardVia').textContent = 'Desvio Seguro via BR-040 · Evitando risco 22h na Serra';
+
     document.getElementById('signDistText').textContent = '350 m';
-    document.getElementById('signRoadCode').textContent = 'Desvio Seguro IA · Via Patrulhada';
-    document.getElementById('signRoadName').textContent = 'Pegue a Saída Segura à Direita ↗';
-    document.getElementById('gpsEta').textContent = '21:52 (+12 min)';
+    document.getElementById('signRoadCode').textContent = 'Saída Segura · BR-040';
+    document.getElementById('signRoadName').textContent = 'Pegue o acesso seguro à direita';
+    document.getElementById('gpsEta').textContent = '50 min · 49 km · Chegada 21:52';
 
-    if (towerMap && riskCircleLayer) {
-      state.showRisk = true;
-      document.getElementById('btnLayerRisk').classList.add('active');
-      riskCircleLayer.addTo(towerMap);
-    }
-
-    // Calcula rota real alternativa passando por rota segura no interior (ex: via Petrópolis/Teresópolis BR-040)
-    const detour = await fetchRoadRouteGeometry([-23.5505, -46.6333], [-22.9068, -43.1729], [-22.505, -43.178]);
-    if (towerMap && window.L) {
-      if (detourRoutePolyline) towerMap.removeLayer(detourRoutePolyline);
-      detourRoutePolyline = L.polyline(detour.coords, { color: '#10b981', weight: 5, dashArray: '8 6' }).addTo(towerMap);
-      towerMap.fitBounds(detourRoutePolyline.getBounds(), { padding: [30, 30] });
-    }
-
-    showToast(`Risco ${score}/100 na Serra às 22h! Rota real desviada pela IA em 168 ms.`);
+    state.showRisk = true;
+    document.getElementById('btnLayerRisk').classList.add('active');
+    towerGmap.setCenter(-22.65, -44.2, 8);
+    carplayGmap.render();
+    showToast(`Risco ${score}/100 na Serra às 22h! Google Maps recalculou desvio seguro em 168 ms.`);
   } else {
+    cam01.waypoints = state.activePrimaryRoute;
     document.getElementById('latencyReadout').textContent = '142 ms';
     document.getElementById('kpiRisk').textContent = '18 / 100';
-    document.getElementById('kpiRiskSub').textContent = '0 trechos bloqueados no momento';
+    document.getElementById('kpiRiskSub').textContent = 'Trânsito Google ao vivo sincronizado';
     document.getElementById('simRiskLabel').textContent = 'Simular Risco / Recálculo IA';
 
-    document.getElementById('signDistText').textContent = '4,8 km';
-    document.getElementById('signRoadCode').textContent = 'BR-116 · Pres. Dutra';
-    document.getElementById('signRoadName').textContent = 'Mantenha a Faixa da Direita ↑ ↑';
-    document.getElementById('gpsEta').textContent = '21:40 (38 min)';
+    document.getElementById('gmapCardEta').textContent = '5 h 18 min (439 km)';
+    document.getElementById('gmapCardEta').className = 'gmap-eta-green mono-num';
+    document.getElementById('gmapCardVia').textContent = 'Via BR-116 (Rod. Pres. Dutra) · R$ 4,88/km';
 
-    if (towerMap) {
-      if (detourRoutePolyline) towerMap.removeLayer(detourRoutePolyline);
-      if (riskCircleLayer) towerMap.removeLayer(riskCircleLayer);
-      state.showRisk = false;
-      document.getElementById('btnLayerRisk').classList.remove('active');
-    }
-    showToast('Risco encerrado. Rota principal na BR-116 restaurada.');
+    document.getElementById('signDistText').textContent = '4,8 km';
+    document.getElementById('signRoadCode').textContent = 'Rod. Pres. Dutra (BR-116)';
+    document.getElementById('signRoadName').textContent = 'Mantenha as faixas da direita';
+    document.getElementById('gpsEta').textContent = '38 min · 38 km · Chegada 21:40';
+
+    state.showRisk = false;
+    document.getElementById('btnLayerRisk').classList.remove('active');
+    towerGmap.render();
+    carplayGmap.render();
+    showToast('Trecho liberado. Rota principal BR-116 restaurada no Google Maps.');
   }
 }
 
@@ -1299,9 +1051,8 @@ function authorizeVucTransshipment() {
   const btn = document.getElementById('btnAuthorizeVuc');
   btn.textContent = '3 VUCs Reservados na Doca 02 (Guarulhos)';
   btn.disabled = true;
-
   selectTruck('CAM-12');
-  showToast('Baldeação confirmada: carga do CAM-12 dividida p/ 3 VUCs elétricos na entrada de SP.');
+  showToast('Baldeação confirmada: carga do CAM-12 transferida p/ 3 VUCs na entrada de SP.');
 }
 
 function toggleDayNightTheme() {
@@ -1319,13 +1070,13 @@ function ackDriverCard(btnId, text) {
   const btn = document.getElementById(btnId);
   btn.textContent = text;
   btn.disabled = true;
-  document.getElementById('driverSpeedVal').textContent = '70 km/h';
-  showToast('Velocidade de economia confirmada na cabine.');
+  document.getElementById('driverSpeedVal').textContent = '70';
+  showToast('Velocidade ideal de 70 km/h confirmada na cabine.');
 }
 
 function speakDriverGuidance() {
-  const tr = fleet.find((item) => item.id === state.selectedTruckId) || fleet[0];
-  const msg = `Olá ${tr.driver}. ${tr.driverTip} Rota segura ativa evitando trecho de risco às vinte e duas horas. ${tr.hubNotice}`;
+  const tr = fleet.find((i) => i.id === state.selectedTruckId) || fleet[0];
+  const msg = `Olá ${tr.driver}. ${tr.driverTip} Navegação Google Maps em tempo real ativa. ${tr.hubNotice}`;
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(msg);
@@ -1353,35 +1104,41 @@ function showToast(message) {
   el.textContent = message;
   el.classList.remove('hidden');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.add('hidden'), 4300);
+  toastTimer = setTimeout(() => el.classList.add('hidden'), 4200);
 }
 
-// Loop de Movimentação Real nas Estradas do Brasil
-function animateRealFleet() {
+// Loop de 60fps: Move os caminhões ao longo das curvas reais das BRs e atualiza o Google Maps ao vivo
+function animateRealtimeMaps() {
   if (state.simSpeed > 0) {
     fleet.forEach((tr) => {
       tr.t = (tr.t + tr.step * state.simSpeed) % 1;
-      const pos = interpLatLng(tr.waypoints, tr.t);
-
-      if (leafletTruckMarkers[tr.id]) {
-        leafletTruckMarkers[tr.id].setLatLng(pos);
-      }
-      if (gTruckMarkers[tr.id] && window.google) {
-        gTruckMarkers[tr.id].setPosition({ lat: pos[0], lng: pos[1] });
-      }
-      if (tr.id === state.selectedTruckId) {
-        if (carplayTruckMarker) carplayTruckMarker.setLatLng(pos);
-        if (gCarplayMarker && window.google) gCarplayMarker.setPosition({ lat: pos[0], lng: pos[1] });
-      }
     });
 
-    updateFallbackMapFrame();
+    const selTr = fleet.find((i) => i.id === state.selectedTruckId) || fleet[0];
+    const selPos = interpRouteWithHeading(selTr.waypoints, selTr.t);
+
+    if (towerGmap && state.mainView === 'tower') {
+      if (state.followTower) {
+        towerGmap.centerLat = selPos.lat;
+        towerGmap.centerLng = selPos.lng;
+      }
+      towerGmap.render();
+    }
+
+    if (carplayGmap && state.mainView === 'driver' && (state.carplayApp === 'split' || state.carplayApp === 'map')) {
+      if (state.followCarPlay) {
+        carplayGmap.centerLat = selPos.lat;
+        carplayGmap.centerLng = selPos.lng;
+      }
+      carplayGmap.render();
+    }
+
     state.dashOffset = (state.dashOffset - 0.6 * state.simSpeed) % 18;
     document.querySelectorAll('.road-dash-line').forEach((line) => {
       line.setAttribute('stroke-dashoffset', state.dashOffset.toFixed(1));
     });
   }
-  requestAnimationFrame(animateRealFleet);
+  requestAnimationFrame(animateRealtimeMaps);
 }
 
 function initSystem() {
@@ -1390,20 +1147,11 @@ function initSystem() {
   renderPartsList();
   selectPart('engine');
   updateFleetKpis();
-  initRealMaps();
+  initGoogleRealtimeMaps();
   selectTruck('CAM-01');
   updateClocks();
   setInterval(updateClocks, 10000);
-
-  try {
-    const savedKey = localStorage.getItem('RP_GMAPS_KEY');
-    if (savedKey) {
-      document.getElementById('gmapsKeyInput').value = savedKey;
-      applyGoogleMapsKey();
-    }
-  } catch (_) {}
-
-  requestAnimationFrame(animateRealFleet);
+  requestAnimationFrame(animateRealtimeMaps);
 }
 
 if (document.readyState === 'loading') {

@@ -3,14 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rota Perfeita | Mapa Real Brasil, Inspeção IA &amp; Multimídia CarPlay</title>
-  <meta name="description" content="Torre de Controle Logística Rota Perfeita com Mapa Real do Brasil, Google Routes API, Inspeção IA de Peças do Caminhão e Central Multimídia CarPlay." />
+  <title>Rota Perfeita | Google Maps em Tempo Real, Inspeção IA &amp; CarPlay</title>
+  <meta name="description" content="Sistema Rota Perfeita com Google Maps e Trânsito em Tempo Real no Brasil, Inspeção Preditiva IA de Peças do Caminhão e Multimídia CarPlay." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <link rel="stylesheet" href="style.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="" defer></script>
   <script src="script.js" defer></script>
 </head>
 <body>
@@ -22,16 +20,15 @@
         <div>
           <h1>Rota Perfeita</h1>
           <p class="brand-subtitle">
-            IA GOAT · Mapa Real Brasil + Satélite LEO (<span id="latencyReadout" class="mono-num text-emerald">142 ms</span>)
+            Google Maps Live Traffic + Satélite LEO (<span id="latencyReadout" class="mono-num text-emerald">142 ms</span>)
           </p>
         </div>
       </div>
 
-      <!-- Navegação entre os 3 Módulos Principais -->
       <nav aria-label="Módulos do sistema" class="tab-switcher">
         <button id="tabTowerBtn" type="button" class="btn btn-tab active" onclick="switchMainView('tower')">
           <span data-icon="globe" data-size="16"></span>
-          <span>Torre &amp; Mapa Real</span>
+          <span>Torre &amp; Google Maps</span>
         </button>
         <button id="tabInspectorBtn" type="button" class="btn btn-tab" onclick="switchMainView('inspector')">
           <span data-icon="cpu" data-size="16"></span>
@@ -48,7 +45,7 @@
       <div class="header-actions">
         <button type="button" class="btn" onclick="toggleGoogleApiDrawer()">
           <span data-icon="key" data-size="15"></span>
-          <span id="apiEngineStatus">Google Maps API</span>
+          <span id="apiEngineStatus">Routes API Key</span>
         </button>
         <button id="btnThemeToggle" type="button" class="btn" onclick="toggleDayNightTheme()">
           <span data-icon="sun" data-size="16"></span>
@@ -63,24 +60,22 @@
   </header>
 
   <main class="app-main">
-    <!-- Barra Expansível de Chave Google Maps + Routes API v2 -->
+    <!-- Configuração Opcional de Chave Google Routes API v2 -->
     <div id="googleApiDrawer" class="api-drawer hidden">
       <div style="flex:1;min-width:260px">
-        <p style="font-weight:700">Integração Nativa Google Maps JavaScript API + Google Routes API v2</p>
+        <p style="font-weight:700">Google Maps em Tempo Real + Google Routes API v2</p>
         <p class="brand-subtitle">
-          O mapa real do Brasil já vem ativo com rotas rodoviárias reais. Cole sua chave <code>AIza...</code> (Maps JS + Routes API) para ativar camadas oficiais Google Traffic e cálculo <code>computeRoutes</code>.
+          Os tiles oficiais do Google Maps com trânsito ao vivo em português já estão ativos em tempo real. Opcionalmente, informe sua chave <code>AIza...</code> para usar o endpoint <code>routes.googleapis.com/directions/v2:computeRoutes</code>.
         </p>
       </div>
       <div class="header-actions">
-        <input id="gmapsKeyInput" type="password" class="input-field" placeholder="Cole sua Google Maps API Key (AIza...)" style="min-width:270px" />
-        <button type="button" class="btn btn-primary" onclick="applyGoogleMapsKey()">Ativar Chave Google</button>
-        <button type="button" class="btn" onclick="clearGoogleMapsKey()">Usar Mapa Real Padrão</button>
+        <input id="gmapsKeyInput" type="password" class="input-field" placeholder="Google API Key opcional (AIza...)" style="min-width:260px" />
+        <button type="button" class="btn btn-primary" onclick="applyGoogleMapsKey()">Salvar Chave</button>
       </div>
     </div>
 
-    <!-- ==================== MÓDULO 1: TORRE DE CONTROLE & MAPA REAL DO BRASIL ==================== -->
-    <section id="viewTower" aria-label="Torre de Controle Logística" class="stack-lg">
-      <!-- KPIs -->
+    <!-- ==================== MÓDULO 1: TORRE DE CONTROLE COM GOOGLE MAPS FIEL EM TEMPO REAL ==================== -->
+    <section id="viewTower" aria-label="Torre de Controle com Google Maps" class="stack-lg">
       <div class="kpi-grid">
         <div class="panel">
           <div class="kpi-head">
@@ -111,76 +106,115 @@
 
         <div class="panel">
           <div class="kpi-head">
-            <span>Score de Risco Dinâmico</span>
+            <span>Score de Risco &amp; Trânsito</span>
             <span class="text-emerald" data-icon="shield-check" data-size="16"></span>
           </div>
           <p id="kpiRisk" class="kpi-value mono-num text-emerald">18 / 100</p>
-          <p id="kpiRiskSub" class="kpi-sub">0 trechos bloqueados no momento</p>
+          <p id="kpiRiskSub" class="kpi-sub">Trânsito Google ao vivo sincronizado</p>
         </div>
       </div>
 
-      <!-- Grid Principal: Mapa Real do Brasil + Painéis Operacionais -->
       <div class="tower-grid">
+        <!-- Google Maps Fiel em Tempo Real -->
         <div class="map-panel">
           <div class="section-header">
             <div>
-              <h2>Mapa Real de Movimentação da Frota no Brasil</h2>
-              <p id="activeRouteSummary" class="brand-subtitle">
-                Rota ativa CAM-01: São Paulo, SP → Rio de Janeiro, RJ (434 km · Rodovia Pres. Dutra BR-116)
-              </p>
+              <h2>Google Maps em Tempo Real · Monitoramento da Frota no Brasil</h2>
+              <p class="brand-subtitle">Arraste o mapa, dê zoom com o mouse até nível de rua, alterne Satélite/Trânsito e clique nos caminhões em movimento</p>
             </div>
             <div class="legend-list">
-              <span class="legend-item"><span class="dot dot-emerald"></span>Rota ótima</span>
+              <span class="legend-item"><span class="dot dot-sky"></span>Rota Ativa Google</span>
+              <span class="legend-item"><span class="dot dot-emerald"></span>Frota Carregada</span>
               <span class="legend-item"><span class="dot dot-amber"></span>Vazio (Retorno)</span>
-              <span class="legend-item"><span class="dot dot-sky"></span>Hub / Baldeação</span>
-              <span class="legend-item"><span class="dot dot-danger"></span>Risco / Bloqueio</span>
+              <span class="legend-item"><span class="dot dot-danger"></span>Bloqueio / Trânsito Lento</span>
             </div>
           </div>
 
-          <!-- Calculadora de Rotas Reais (Google Routes API / OSRM) -->
-          <div class="route-bar" aria-label="Roteirizador rodoviário real">
-            <select id="routeOriginSelect" class="select-field" aria-label="Cidade de origem">
-              <option value="-23.5505,-46.6333|São Paulo, SP" selected>Origem: São Paulo, SP</option>
-              <option value="-16.6869,-49.2648|Goiânia, GO">Origem: Goiânia, GO</option>
-              <option value="-25.4284,-49.2733|Curitiba, PR">Origem: Curitiba, PR</option>
-              <option value="-15.6014,-56.0979|Cuiabá, MT">Origem: Cuiabá, MT</option>
-              <option value="-12.9714,-38.5014|Salvador, BA">Origem: Salvador, BA</option>
-              <option value="-30.0346,-51.2177|Porto Alegre, RS">Origem: Porto Alegre, RS</option>
-            </select>
+          <!-- Viewport Fiel do Google Maps -->
+          <div id="towerGmapViewport" class="gmap-viewport" aria-label="Google Maps em tempo real do Brasil">
+            <!-- Card Flutuante de Rotas Estilo Google Maps -->
+            <div class="gmap-directions-card">
+              <div class="gmap-dir-row">
+                <span style="width:10px;height:10px;border-radius:50%;border:2.5px solid #1a73e8;display:inline-block;flex-shrink:0"></span>
+                <select id="routeOriginSelect" class="gmap-select" aria-label="Origem no Google Maps">
+                  <option value="-23.5505,-46.6333|São Paulo, SP" selected>São Paulo, SP</option>
+                  <option value="-16.6869,-49.2648|Goiânia, GO">Goiânia, GO</option>
+                  <option value="-25.4284,-49.2733|Curitiba, PR">Curitiba, PR</option>
+                  <option value="-15.6014,-56.0979|Cuiabá, MT">Cuiabá, MT</option>
+                  <option value="-12.9714,-38.5014|Salvador, BA">Salvador, BA</option>
+                  <option value="-30.0346,-51.2177|Porto Alegre, RS">Porto Alegre, RS</option>
+                </select>
+              </div>
+              <div class="gmap-dir-row">
+                <span style="width:10px;height:10px;border-radius:50%;background:#ea4335;display:inline-block;flex-shrink:0"></span>
+                <select id="routeDestSelect" class="gmap-select" aria-label="Destino no Google Maps">
+                  <option value="-22.9068,-43.1729|Rio de Janeiro, RJ" selected>Rio de Janeiro, RJ</option>
+                  <option value="-23.9608,-46.3336|Porto de Santos, SP">Porto de Santos, SP</option>
+                  <option value="-19.9167,-43.9345|Belo Horizonte, MG">Belo Horizonte, MG</option>
+                  <option value="-8.0476,-34.8770|Recife, PE">Recife, PE</option>
+                  <option value="-23.5505,-46.6333|São Paulo, SP">São Paulo, SP</option>
+                  <option value="-15.7975,-47.8919|Brasília, DF">Brasília, DF</option>
+                </select>
+                <button type="button" class="gmap-pill-btn active" onclick="calculateCustomRealRoute()">Ir</button>
+              </div>
+              <div class="gmap-route-summary">
+                <div>
+                  <span id="gmapCardEta" class="gmap-eta-green mono-num">5 h 18 min (439 km)</span>
+                  <p id="gmapCardVia" class="gmap-via-sub">Via BR-116 (Rod. Pres. Dutra) · R$ 4,88/km</p>
+                </div>
+              </div>
+            </div>
 
-            <select id="routeDestSelect" class="select-field" aria-label="Cidade de destino">
-              <option value="-22.9068,-43.1729|Rio de Janeiro, RJ" selected>Destino: Rio de Janeiro, RJ</option>
-              <option value="-23.9608,-46.3336|Porto de Santos, SP">Destino: Porto de Santos, SP</option>
-              <option value="-19.9167,-43.9345|Belo Horizonte, MG">Destino: Belo Horizonte, MG</option>
-              <option value="-8.0476,-34.8770|Recife, PE">Destino: Recife, PE</option>
-              <option value="-23.5505,-46.6333|São Paulo, SP">Destino: São Paulo, SP</option>
-              <option value="-15.7975,-47.8919|Brasília, DF">Destino: Brasília, DF</option>
-            </select>
+            <!-- Pílulas Superiores Direitas Estilo Google Maps -->
+            <div class="gmap-top-chips">
+              <button id="chipTraffic" type="button" class="gmap-pill-btn active" onclick="toggleGoogleTrafficLayer()">Trânsito Ao Vivo</button>
+              <button id="chipTerrain" type="button" class="gmap-pill-btn" onclick="setTowerMapMode('terrain')">Relevo</button>
+              <button type="button" class="gmap-pill-btn" onclick="fitBrazilView()">Visão Brasil</button>
+              <button id="chipFollowTower" type="button" class="gmap-pill-btn" onclick="toggleFollowOnTower()">Seguir CAM-01</button>
+            </div>
 
-            <button type="button" class="btn btn-primary" onclick="calculateCustomRealRoute()">
-              <span data-icon="route" data-size="16"></span>
-              <span>Calcular Rota Real</span>
+            <!-- Camada Interativa de Tiles Reais do Google Maps + Rotas + Caminhões -->
+            <div id="towerGmapStage" class="gmap-stage">
+              <canvas id="towerVectorCanvas" class="gmap-vector-canvas"></canvas>
+              <div id="towerTilesContainer" class="gmap-tiles-layer"></div>
+              <svg id="towerOverlaySvg" class="gmap-overlay-svg"></svg>
+            </div>
+
+            <!-- Quadrado Inferior Esquerdo Satélite / Mapa (Fiel ao Google Maps) -->
+            <button id="btnSatSquare" type="button" class="gmap-layer-toggle" onclick="toggleTowerSatellite()">
+              <span id="satSquareLabel">Satélite</span>
             </button>
-          </div>
 
-          <!-- Container do Mapa Real (Google Maps / Leaflet Multi-Camadas) -->
-          <div class="real-map-frame">
-            <div class="map-style-bar" role="toolbar" aria-label="Camadas do mapa">
-              <button id="btnTileRoad" type="button" class="btn-map-chip active" onclick="setMapTileStyle('road')">Ruas / BRs</button>
-              <button id="btnTileSat" type="button" class="btn-map-chip" onclick="setMapTileStyle('satellite')">Satélite</button>
-              <button id="btnTileDark" type="button" class="btn-map-chip" onclick="setMapTileStyle('dark')">Radar Escuro</button>
-              <button type="button" class="btn-map-chip" onclick="fitBrazilBounds()">Brasil Inteiro</button>
-              <button type="button" class="btn-map-chip" onclick="focusSelectedTruckOnMap()">Focar Caminhão</button>
+            <!-- Barra Inferior Central de Trânsito em Tempo Real -->
+            <div class="gmap-traffic-legend">
+              <span>Trânsito em tempo real</span>
+              <span>Rápido</span>
+              <span class="traffic-scale">
+                <span style="background:#188038"></span>
+                <span style="background:#fbbc04"></span>
+                <span style="background:#ea4335"></span>
+                <span style="background:#800000"></span>
+              </span>
+              <span>Lento</span>
             </div>
-            <div id="towerMapCanvas" class="map-canvas" aria-label="Mapa interativo real do Brasil"></div>
+
+            <!-- Controles Inferiores Direitos de Zoom e GPS Estilo Google Maps -->
+            <div class="gmap-zoom-stack">
+              <button type="button" class="gmap-ctrl-btn" onclick="focusSelectedTruckOnMap()" title="Centralizar no caminhão">◎</button>
+              <button type="button" class="gmap-ctrl-btn" onclick="zoomTowerMap(1)" title="Aproximar">+</button>
+              <button type="button" class="gmap-ctrl-btn" onclick="zoomTowerMap(-1)" title="Afastar">−</button>
+            </div>
+
+            <div class="gmap-attrib">Dados cartográficos &copy;2026 Google · Trânsito em tempo real</div>
           </div>
 
-          <!-- Barra Inferior de Filtros da Torre -->
+          <!-- Dock Operacional da Torre -->
           <div class="map-dock">
             <div class="dock-group">
-              <button id="btnLayerHubs" type="button" class="btn-map-chip active" onclick="toggleTowerLayer('hubs')">Hubs &amp; Baldeação</button>
-              <button id="btnLayerRisk" type="button" class="btn-map-chip" onclick="toggleTowerLayer('risk')">Mancha de Risco / Clima</button>
-              <button type="button" class="btn-map-chip" onclick="selectTruck('CAM-04'); focusSelectedTruckOnMap();">Ver CAM-04 (Vazio)</button>
+              <button id="btnLayerHubs" type="button" class="btn-map-chip active" onclick="toggleTowerLayer('hubs')">Hubs de Revezamento</button>
+              <button id="btnLayerRisk" type="button" class="btn-map-chip" onclick="toggleTowerLayer('risk')">Zona de Risco 22h</button>
+              <button type="button" class="btn-map-chip" onclick="selectTruck('CAM-01'); focusSelectedTruckOnMap();">Zoom Rodovia CAM-01</button>
+              <button type="button" class="btn-map-chip" onclick="selectTruck('CAM-04'); focusSelectedTruckOnMap();">Focar CAM-04 (Vazio)</button>
             </div>
             <div class="dock-group">
               <button type="button" class="btn-map-chip" onclick="toggleSimulationSpeed()">
@@ -192,13 +226,12 @@
 
         <!-- Coluna Direita da Torre -->
         <div class="stack-md">
-          <!-- Resumo do Caminhão Selecionado -->
           <div class="panel">
             <div class="section-header">
               <div>
                 <label for="truckSelect" class="brand-subtitle">Caminhão Monitorado</label>
                 <div style="margin-top:4px">
-                  <select id="truckSelect" class="select-field" onchange="selectTruck(this.value)"></select>
+                  <select id="truckSelect" class="select-field" onchange="selectTruck(this.value); focusSelectedTruckOnMap();"></select>
                 </div>
               </div>
               <span id="twinBadge" class="status-pill pill-emerald">Saúde 98%</span>
@@ -232,7 +265,7 @@
             <div class="header-actions" style="margin-top:12px">
               <button type="button" class="btn btn-primary" style="flex:1" onclick="switchMainView('inspector')">
                 <span data-icon="cpu" data-size="15"></span>
-                <span>Inspecionar Peças</span>
+                <span>Peças IA</span>
               </button>
               <button type="button" class="btn btn-emerald" style="flex:1" onclick="switchMainView('driver')">
                 <span data-icon="navigation" data-size="15"></span>
@@ -241,14 +274,13 @@
             </div>
           </div>
 
-          <!-- Oportunidades de Retorno -->
           <div class="panel">
             <div class="section-header">
               <h2>Oportunidades de Retorno</h2>
               <span id="backhaulTag" class="status-pill pill-amber">1 Match IA</span>
             </div>
             <p style="margin-top:10px;font-size:13px">
-              <strong>Caminhão 04</strong> voltando vazio na <strong>BR-050</strong> (Goiânia → SP). Carga compatível de <strong>18t (Alimentos)</strong> em Uberlândia (+9 km), gerando <strong>+R$ 6.400 líquidos</strong>.
+              <strong>Caminhão 04</strong> voltando vazio na <strong>BR-050</strong> (Goiânia → SP). Carga de <strong>18t (Alimentos)</strong> em Uberlândia (+9 km), gerando <strong>+R$ 6.400 líquidos</strong>.
             </p>
             <button id="btnMatchBackhaul" type="button" class="btn btn-emerald btn-full" style="margin-top:12px" onclick="allocateReturnFreight()">
               <span data-icon="package-plus" data-size="16"></span>
@@ -256,7 +288,6 @@
             </button>
           </div>
 
-          <!-- Revezamento & Baldeação -->
           <div class="panel">
             <div class="section-header">
               <h2>Hubs de Revezamento &amp; Baldeação</h2>
@@ -288,21 +319,18 @@
 
     <!-- ==================== MÓDULO 2: INSPEÇÃO IA DE COMPONENTES DO CAMINHÃO ==================== -->
     <section id="viewInspector" aria-label="Módulo de Integridade das Peças por IA" class="stack-lg hidden">
-      <div class="panel section-header" style="padding:16px">
+      <div class="panel section-header">
         <div>
           <h2 id="inspectorHeaderTitle">Gêmeo Digital de Peças · CAM-01 (Carreta 6 Eixos)</h2>
-          <p class="brand-subtitle">Clique em qualquer componente no raio-x do caminhão ou na lista para checar a integridade preditiva via sensores CAN/IoT</p>
+          <p class="brand-subtitle">Clique nos números de 1 a 8 sobre o caminhão ou na lista lateral para checar a integridade preditiva das peças</p>
         </div>
-        <div class="header-actions">
-          <button id="btnSimPartWear" type="button" class="btn btn-amber" onclick="simulatePartAnomaly()">
-            <span data-icon="wrench" data-size="16"></span>
-            <span id="simPartLabel">Simular Desgaste Preditivo em Peça</span>
-          </button>
-        </div>
+        <button id="btnSimPartWear" type="button" class="btn btn-amber" onclick="simulatePartAnomaly()">
+          <span data-icon="wrench" data-size="16"></span>
+          <span id="simPartLabel">Simular Desgaste Preditivo em Peça</span>
+        </button>
       </div>
 
       <div class="inspector-grid">
-        <!-- Coluna 1: Lista de Componentes Monitorados -->
         <div class="panel">
           <div class="section-header">
             <h3>Subsistemas Monitorados (8)</h3>
@@ -311,7 +339,6 @@
           <div id="partsListContainer" style="margin-top:8px"></div>
         </div>
 
-        <!-- Coluna 2: Blueprint HUD Interativo do Caminhão (Inspirado no HUD Técnico) -->
         <div class="blueprint-stage">
           <div style="width:100%;display:flex;justify-content:space-between;font-size:12px;color:#7dd3fc;margin-bottom:8px">
             <span class="mono-num">SCAN CAN-BUS: 10 Hz</span>
@@ -319,37 +346,27 @@
           </div>
 
           <svg id="truckBlueprintSvg" viewBox="0 0 380 540" class="blueprint-svg" role="img" aria-label="Diagrama de raio-x dos componentes do caminhão">
-            <!-- Anéis de Telemetria / Radar HUD (Inspirados na Imagem 1) -->
             <circle cx="190" cy="270" r="172" fill="none" stroke="#163a5f" stroke-width="1.4" stroke-dasharray="6 6" />
             <circle cx="190" cy="270" r="136" fill="none" stroke="#1d4f80" stroke-width="1" />
             <line x1="18" y1="270" x2="362" y2="270" stroke="#12304f" stroke-width="1" />
             <line x1="190" y1="30" x2="190" y2="510" stroke="#12304f" stroke-width="1" />
 
-            <!-- Longarinas do Chassi -->
             <rect x="166" y="65" width="8" height="425" fill="#173a5e" stroke="#38bdf8" stroke-width="1" />
             <rect x="206" y="65" width="8" height="425" fill="#173a5e" stroke="#38bdf8" stroke-width="1" />
-
-            <!-- Semirreboque (Carreta Baú 3 Eixos) -->
             <rect x="122" y="210" width="136" height="285" rx="10" fill="#0b2239" fill-opacity="0.88" stroke="#38bdf8" stroke-width="2.2" />
             <line x1="134" y1="230" x2="246" y2="230" stroke="#1e4976" stroke-width="1.2" />
             <line x1="134" y1="475" x2="246" y2="475" stroke="#10b981" stroke-width="2" />
 
-            <!-- Cavalo Mecânico Aerodinâmico -->
             <path d="M132,196 L132,88 Q132,52 190,52 Q248,52 248,88 L248,196 Z" fill="#0e2d4a" stroke="#10b981" stroke-width="2.4" />
-            <!-- Para-brisa -->
             <path d="M144,92 Q190,76 236,92 L230,114 L150,114 Z" fill="#0284c7" fill-opacity="0.45" stroke="#7dd3fc" stroke-width="1.2" />
 
-            <!-- Pneus Dianteiros + Tração 6x4 + 3 Eixos Carreta -->
             <g fill="#0f2942" stroke="#38bdf8" stroke-width="1.6">
-              <!-- Eixo Direcional -->
               <rect x="114" y="96" width="14" height="32" rx="3" />
               <rect x="252" y="96" width="14" height="32" rx="3" />
-              <!-- Tração Dupla -->
               <rect x="112" y="152" width="16" height="30" rx="3" />
               <rect x="252" y="152" width="16" height="30" rx="3" />
               <rect x="112" y="186" width="16" height="30" rx="3" />
               <rect x="252" y="186" width="16" height="30" rx="3" />
-              <!-- 3 Eixos Semirreboque -->
               <rect x="108" y="382" width="14" height="28" rx="3" />
               <rect x="258" y="382" width="14" height="28" rx="3" />
               <rect id="svgBrakeWheelHighlight" x="258" y="416" width="14" height="28" rx="3" />
@@ -358,65 +375,23 @@
               <rect x="258" y="450" width="14" height="28" rx="3" />
             </g>
 
-            <!-- Tanques Laterais de Diesel -->
             <rect x="118" y="129" width="12" height="21" rx="2" fill="#065f46" stroke="#6ee7b7" stroke-width="1.4" />
             <rect x="250" y="129" width="12" height="21" rx="2" fill="#065f46" stroke="#6ee7b7" stroke-width="1.4" />
-
-            <!-- Bloco do Motor + Caixa de Transmissão -->
             <rect x="170" y="72" width="40" height="38" rx="5" fill="#064e3b" stroke="#34d399" stroke-width="1.8" />
             <rect x="174" y="114" width="32" height="30" rx="4" fill="#164e63" stroke="#38bdf8" stroke-width="1.5" />
-
-            <!-- Quinta Roda (Acoplamento) -->
             <circle cx="190" cy="202" r="14" fill="#1e293b" stroke="#7dd3fc" stroke-width="2" />
 
-            <!-- Hotspots Interativos das 8 Peças -->
-            <g id="hotspot-engine" class="comp-hotspot" onclick="selectPart('engine')">
-              <circle cx="190" cy="90" r="11" fill="#10b981" stroke="#ffffff" stroke-width="2" />
-              <text x="190" y="94" text-anchor="middle" fill="#052e16" font-size="12" font-weight="800">1</text>
-            </g>
-
-            <g id="hotspot-gearbox" class="comp-hotspot" onclick="selectPart('gearbox')">
-              <circle cx="190" cy="129" r="11" fill="#10b981" stroke="#ffffff" stroke-width="2" />
-              <text x="190" y="133" text-anchor="middle" fill="#052e16" font-size="12" font-weight="800">2</text>
-            </g>
-
-            <g id="hotspot-tanks" class="comp-hotspot" onclick="selectPart('tanks')">
-              <circle cx="124" cy="139" r="11" fill="#10b981" stroke="#ffffff" stroke-width="2" />
-              <text x="124" y="143" text-anchor="middle" fill="#052e16" font-size="12" font-weight="800">3</text>
-            </g>
-
-            <g id="hotspot-starlink" class="comp-hotspot" onclick="selectPart('starlink')">
-              <circle cx="228" cy="148" r="11" fill="#10b981" stroke="#ffffff" stroke-width="2" />
-              <text x="228" y="152" text-anchor="middle" fill="#052e16" font-size="12" font-weight="800">4</text>
-            </g>
-
-            <g id="hotspot-coupling" class="comp-hotspot" onclick="selectPart('coupling')">
-              <circle cx="190" cy="202" r="11" fill="#10b981" stroke="#ffffff" stroke-width="2" />
-              <text x="190" y="206" text-anchor="middle" fill="#052e16" font-size="12" font-weight="800">5</text>
-            </g>
-
-            <g id="hotspot-battery" class="comp-hotspot" onclick="selectPart('battery')">
-              <circle cx="154" cy="168" r="11" fill="#10b981" stroke="#ffffff" stroke-width="2" />
-              <text x="154" y="172" text-anchor="middle" fill="#052e16" font-size="12" font-weight="800">6</text>
-            </g>
-
-            <g id="hotspot-brakes" class="comp-hotspot" onclick="selectPart('brakes')">
-              <circle id="hotspotBrakesCircle" cx="264" cy="430" r="11" fill="#10b981" stroke="#ffffff" stroke-width="2" />
-              <text x="264" y="434" text-anchor="middle" fill="#052e16" font-size="12" font-weight="800">7</text>
-            </g>
-
-            <g id="hotspot-tires" class="comp-hotspot" onclick="selectPart('tires')">
-              <circle cx="115" cy="396" r="11" fill="#10b981" stroke="#ffffff" stroke-width="2" />
-              <text x="115" y="400" text-anchor="middle" fill="#052e16" font-size="12" font-weight="800">8</text>
-            </g>
+            <g class="comp-hotspot" onclick="selectPart('engine')"><circle cx="190" cy="90" r="11" fill="#10b981" stroke="#ffffff" stroke-width="2" /><text x="190" y="94" text-anchor="middle" fill="#052e16" font-size="12" font-weight="800">1</text></g>
+            <g class="comp-hotspot" onclick="selectPart('gearbox')"><circle cx="190" cy="129" r="11" fill="#10b981" stroke="#ffffff" stroke-width="2" /><text x="190" y="133" text-anchor="middle" fill="#052e16" font-size="12" font-weight="800">2</text></g>
+            <g class="comp-hotspot" onclick="selectPart('tanks')"><circle cx="124" cy="139" r="11" fill="#10b981" stroke="#ffffff" stroke-width="2" /><text x="124" y="143" text-anchor="middle" fill="#052e16" font-size="12" font-weight="800">3</text></g>
+            <g class="comp-hotspot" onclick="selectPart('starlink')"><circle cx="228" cy="148" r="11" fill="#10b981" stroke="#ffffff" stroke-width="2" /><text x="228" y="152" text-anchor="middle" fill="#052e16" font-size="12" font-weight="800">4</text></g>
+            <g class="comp-hotspot" onclick="selectPart('coupling')"><circle cx="190" cy="202" r="11" fill="#10b981" stroke="#ffffff" stroke-width="2" /><text x="190" y="206" text-anchor="middle" fill="#052e16" font-size="12" font-weight="800">5</text></g>
+            <g class="comp-hotspot" onclick="selectPart('battery')"><circle cx="154" cy="168" r="11" fill="#10b981" stroke="#ffffff" stroke-width="2" /><text x="154" y="172" text-anchor="middle" fill="#052e16" font-size="12" font-weight="800">6</text></g>
+            <g class="comp-hotspot" onclick="selectPart('brakes')"><circle id="hotspotBrakesCircle" cx="264" cy="430" r="11" fill="#10b981" stroke="#ffffff" stroke-width="2" /><text x="264" y="434" text-anchor="middle" fill="#052e16" font-size="12" font-weight="800">7</text></g>
+            <g class="comp-hotspot" onclick="selectPart('tires')"><circle cx="115" cy="396" r="11" fill="#10b981" stroke="#ffffff" stroke-width="2" /><text x="115" y="400" text-anchor="middle" fill="#052e16" font-size="12" font-weight="800">8</text></g>
           </svg>
-
-          <p style="font-size:12px;color:#bae6fd;text-align:center;margin-top:6px">
-            Toque nos números de <strong>1 a 8</strong> sobre o caminhão para abrir a telemetria da peça
-          </p>
         </div>
 
-        <!-- Coluna 3: Diagnóstico Detalhado da Peça Selecionada -->
         <div class="panel stack-md">
           <div class="section-header">
             <div>
@@ -438,7 +413,7 @@
 
           <dl class="metrics-2col">
             <div>
-              <dt>Temperatura / Leitura Primária</dt>
+              <dt>Temperatura / Leitura</dt>
               <dd id="partMetric1" class="mono-num">91 °C (Óleo normal)</dd>
             </div>
             <div>
@@ -458,7 +433,7 @@
           <div style="padding-top:10px;border-top:1px solid var(--border-subtle)">
             <p style="font-size:12px;font-weight:700" class="text-sky">Parecer Preditivo IA GOAT:</p>
             <p id="partAiVerdict" style="font-size:13px;margin-top:4px">
-              Queima limpa nos 6 cilindros. Sem risco de pane nos próximos 10.000 km. Economia de 4% ativa em rampa.
+              Queima equilibrada nos 6 cilindros. Sem risco de falha mecânica.
             </p>
           </div>
 
@@ -470,10 +445,9 @@
       </div>
     </section>
 
-    <!-- ==================== MÓDULO 3: MULTIMÍDIA CARPLAY DO MOTORISTA ==================== -->
+    <!-- ==================== MÓDULO 3: MULTIMÍDIA CARPLAY COM GOOGLE MAPS NAVEGAÇÃO 3D AO VIVO ==================== -->
     <section id="viewDriver" aria-label="Central Multimídia CarPlay da Cabine" class="hidden">
       <div class="carplay-shell">
-        <!-- Dock Lateral Esquerdo Padrão CarPlay -->
         <aside class="carplay-dock" aria-label="Barra lateral CarPlay">
           <div class="cp-status-stack">
             <p id="cpClock" class="cp-clock mono-num">20:14</p>
@@ -481,7 +455,7 @@
           </div>
 
           <div class="cp-app-icons">
-            <button id="cpBtnSplit" type="button" class="cp-icon-btn active" onclick="switchCarPlayApp('split')" title="Painel Principal CarPlay">
+            <button id="cpBtnSplit" type="button" class="cp-icon-btn active" onclick="switchCarPlayApp('split')" title="Painel CarPlay">
               <span data-icon="layout" data-size="20"></span>
               <span>Painel</span>
             </button>
@@ -493,70 +467,82 @@
               <span data-icon="video" data-size="20"></span>
               <span>Câmeras</span>
             </button>
-            <button id="cpBtnPhone" type="button" class="cp-icon-btn" onclick="switchCarPlayApp('phone')" title="Telefone, Torre e Mensagens">
+            <button id="cpBtnPhone" type="button" class="cp-icon-btn" onclick="switchCarPlayApp('phone')" title="Telefone e Torre">
               <span data-icon="phone" data-size="20"></span>
               <span>Torre</span>
             </button>
-            <button id="cpBtnApps" type="button" class="cp-icon-btn" onclick="switchCarPlayApp('apps')" title="Descanso, Clima e Apps">
+            <button id="cpBtnApps" type="button" class="cp-icon-btn" onclick="switchCarPlayApp('apps')" title="Apps da Cabine">
               <span data-icon="grid" data-size="20"></span>
               <span>Apps</span>
             </button>
           </div>
 
-          <button type="button" class="cp-icon-btn cp-voice-btn" onclick="speakDriverGuidance()" title="Assistente de Voz da Cabine">
+          <button type="button" class="cp-icon-btn cp-voice-btn" onclick="speakDriverGuidance()" title="Assistente de Voz">
             <span data-icon="volume-2" data-size="22"></span>
             <span>Voz</span>
           </button>
         </aside>
 
-        <!-- Área Principal CarPlay -->
         <div class="carplay-stage">
-          <!-- TELA CARPLAY 1 & 2: SPLIT DASHBOARD / MAPS TELA CHEIA -->
           <div id="cpScreenSplitAndMap" class="cp-split-grid">
-            <!-- Mapa Real de Navegação na Multimídia + Placa de Faixas -->
-            <div id="cpMapWrapper" class="cp-map-box">
-              <div class="cp-nav-overlay">
-                <div class="cp-turn-box">
-                  <span class="text-amber" data-icon="arrow-up-right" data-size="26"></span>
-                  <p id="signDistText" class="mono-num" style="font-size:18px;font-weight:800;margin-top:2px">4,8 km</p>
+            <!-- Google Maps Navegação Fiel em Tempo Real dentro do CarPlay -->
+            <div class="cp-map-box">
+              <div id="carplayGmapViewport" class="cp-map-viewport">
+                <!-- Placa Verde Oficial de Manobra Estilo Google Maps Navigation -->
+                <div class="gmap-turn-banner">
+                  <div class="gmap-turn-main">
+                    <span data-icon="arrow-up-right" data-size="30"></span>
+                    <div>
+                      <p id="signDistText" class="mono-num" style="font-size:20px;font-weight:800;line-height:1.1">4,8 km</p>
+                      <p id="signRoadCode" style="font-size:14px;font-weight:700;margin-top:2px">Rod. Pres. Dutra (BR-116)</p>
+                    </div>
+                  </div>
+                  <div class="gmap-turn-lanes">
+                    <span id="signRoadName">Mantenha as faixas da direita</span>
+                    <span>↑ &nbsp; ⬆ &nbsp; ⬆</span>
+                  </div>
                 </div>
 
-                <div class="cp-road-sign">
-                  <span id="signRoadCode" style="font-size:12px;font-weight:700;color:#dbeafe">BR-116 · Pres. Dutra</span>
-                  <p id="signRoadName" style="font-size:16px;font-weight:800">Mantenha a Faixa da Direita ↑ ↑</p>
+                <!-- Botões Flutuantes Direitos no Google Maps do CarPlay -->
+                <div class="cp-map-tools">
+                  <button id="btnCp3d" type="button" class="gmap-ctrl-btn" onclick="toggleCarPlay3D()" title="Alternar 3D / 2D" style="font-size:12px">3D</button>
+                  <button type="button" class="gmap-ctrl-btn" onclick="toggleCarPlaySatellite()" title="Alternar Satélite" style="font-size:12px">SAT</button>
+                  <button type="button" class="gmap-ctrl-btn" onclick="zoomCarPlayMap(1)" title="Aproximar">+</button>
+                  <button type="button" class="gmap-ctrl-btn" onclick="zoomCarPlayMap(-1)" title="Afastar">−</button>
+                  <button type="button" class="gmap-ctrl-btn" onclick="recenterCarPlayMap()" title="Seguir Caminhão">◎</button>
                 </div>
 
-                <div class="cp-hub-sign">
-                  <span style="font-size:12px;font-weight:700;color:#d1fae5">Parada</span>
-                  <p style="font-size:15px;font-weight:800">Hub Km 120</p>
+                <!-- Palco de Tiles em Tempo Real do Google Maps no CarPlay -->
+                <div id="carplayGmapStage" class="gmap-stage tilt-3d">
+                  <canvas id="carplayVectorCanvas" class="gmap-vector-canvas"></canvas>
+                  <div id="carplayTilesContainer" class="gmap-tiles-layer"></div>
+                  <svg id="carplayOverlaySvg" class="gmap-overlay-svg"></svg>
+                </div>
+
+                <!-- Velocímetro + Placa de Limite Ideal Estilo Google Maps -->
+                <div class="gmap-speed-Cluster">
+                  <div id="idealSpeedSign" class="speed-limit-ring">70</div>
+                  <div>
+                    <p id="driverSpeedVal" class="mono-num" style="font-size:18px;font-weight:800;line-height:1.1">78</p>
+                    <p style="font-size:12px;color:#3c4043;font-weight:600">km/h</p>
+                  </div>
                 </div>
               </div>
 
-              <!-- Mapa Real Sincronizado na Cabine -->
-              <div id="carplayMapCanvas" class="cp-map-canvas" aria-label="Mapa de navegação na central multimídia"></div>
-
-              <!-- Barra Inferior de Chegada, Velocidade e Controle do Mapa -->
+              <!-- Barra Inferior Branca de Tempo e Chegada do Google Maps CarPlay -->
               <div class="cp-eta-bar">
                 <div>
-                  <span style="font-size:12px;color:#cbd5e1">Chegada Hub</span>
-                  <p id="gpsEta" class="mono-num" style="font-size:18px;font-weight:800;color:#6ee7b7">21:40 (38 min)</p>
+                  <p id="gpsEta" class="mono-num" style="font-size:19px;font-weight:800;color:#137333">38 min · 38 km · Chegada 21:40</p>
+                  <p style="font-size:12px;color:#3c4043;font-weight:600">Próxima parada: Hub Km 120 (Posto Resende) · Trânsito livre</p>
                 </div>
-                <div>
-                  <span style="font-size:12px;color:#cbd5e1">Velocidade / Ideal</span>
-                  <p class="mono-num" style="font-size:18px;font-weight:800">
-                    <span id="driverSpeedVal" class="text-amber">78 km/h</span> · Ideal <span id="idealSpeedSign" class="text-emerald">70</span>
-                  </p>
-                </div>
-                <div class="dock-group">
-                  <button type="button" class="btn-map-chip" onclick="recenterCarPlayMap()">Centralizar</button>
-                  <button type="button" class="btn-map-chip" onclick="toggleCarPlaySatellite()">Satélite / Ruas</button>
-                </div>
+                <button type="button" class="gmap-pill-btn active" onclick="switchCarPlayApp(state.carplayApp === 'map' ? 'split' : 'map')">
+                  <span id="btnExpandCpMapText">Tela Cheia</span>
+                </button>
               </div>
             </div>
 
-            <!-- Coluna Direita do Split-Screen CarPlay (Ocultada quando em Mapa Tela Cheia) -->
+            <!-- Widgets Direitos do CarPlay -->
             <div id="cpRightWidgets" class="cp-widgets-col">
-              <!-- Card 1: Copiloto Simples (Economia & Segurança) -->
               <div class="cp-widget">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
                   <h3 id="driverGreeting" style="color:#ffffff">Seu Carlos · CAM-01</h3>
@@ -570,7 +556,6 @@
                 </button>
               </div>
 
-              <!-- Card 2: Segurança & Próximo Hub -->
               <div class="cp-widget">
                 <h3 style="color:#fca5a5">Segurança &amp; Troca de Carreta</h3>
                 <p id="driverSecurityText" style="font-size:14px;margin-top:6px;color:#f1f5f9">
@@ -581,7 +566,6 @@
                 </p>
               </div>
 
-              <!-- Card 3: Widget CarPlay de Áudio / Rádio Estrada & Comunicador -->
               <div class="cp-widget">
                 <div style="display:flex;align-items:center;justify-content:space-between">
                   <div>
@@ -599,7 +583,7 @@
             </div>
           </div>
 
-          <!-- TELA CARPLAY 3: ROTACAM 4 CÂMERAS -->
+          <!-- TELA CARPLAY: CÂMERAS ROTACAM -->
           <div id="cpScreenCam" class="cp-widget hidden" style="flex:1">
             <div class="section-header" style="border-bottom-color:#23374d">
               <div class="brand-group">
@@ -614,63 +598,25 @@
 
             <div class="cam-grid" style="margin-top:12px">
               <div class="cam-feed" onclick="toggleCameraExpand(this)">
-                <div class="cam-feed-head">
-                  <span>Câmera 01 · Frente da Pista</span>
-                  <span style="color:#6ee7b7">Distância Segura (65 m)</span>
-                </div>
-                <svg viewBox="0 0 320 140" style="width:100%;display:block">
-                  <rect width="320" height="140" rx="6" fill="#102030" />
-                  <rect width="320" height="58" rx="6" fill="#16324f" />
-                  <polygon points="118,58 202,58 295,140 25,140" fill="#26323f" />
-                  <line class="road-dash-line" x1="160" y1="58" x2="160" y2="140" stroke="#fde047" stroke-dasharray="8 6" stroke-width="2" />
-                  <rect x="144" y="66" width="32" height="26" rx="3" fill="#e2e8f0" stroke="#38bdf8" stroke-width="1.5" />
-                </svg>
+                <div class="cam-feed-head"><span>Câmera 01 · Frente da Pista</span><span style="color:#6ee7b7">Distância Segura (65 m)</span></div>
+                <svg viewBox="0 0 320 140" style="width:100%;display:block"><rect width="320" height="140" rx="6" fill="#102030" /><rect width="320" height="58" rx="6" fill="#16324f" /><polygon points="118,58 202,58 295,140 25,140" fill="#26323f" /><line class="road-dash-line" x1="160" y1="58" x2="160" y2="140" stroke="#fde047" stroke-dasharray="8 6" stroke-width="2" /><rect x="144" y="66" width="32" height="26" rx="3" fill="#e2e8f0" stroke="#38bdf8" stroke-width="1.5" /></svg>
               </div>
-
               <div class="cam-feed" onclick="toggleCameraExpand(this)">
-                <div class="cam-feed-head">
-                  <span>Câmera 02 · Ponto Cego Direito</span>
-                  <span style="color:#6ee7b7">Livre</span>
-                </div>
-                <svg viewBox="0 0 320 140" style="width:100%;display:block">
-                  <rect width="320" height="140" rx="6" fill="#102030" />
-                  <rect width="320" height="55" rx="6" fill="#16324f" />
-                  <polygon points="40,55 210,55 240,140 0,140" fill="#26323f" />
-                  <rect x="225" y="15" width="95" height="125" rx="4" fill="#334155" />
-                  <text x="272" y="82" text-anchor="middle" fill="#cbd5e1" font-size="12">Carreta Dir.</text>
-                </svg>
+                <div class="cam-feed-head"><span>Câmera 02 · Ponto Cego Direito</span><span style="color:#6ee7b7">Livre</span></div>
+                <svg viewBox="0 0 320 140" style="width:100%;display:block"><rect width="320" height="140" rx="6" fill="#102030" /><rect width="320" height="55" rx="6" fill="#16324f" /><polygon points="40,55 210,55 240,140 0,140" fill="#26323f" /><rect x="225" y="15" width="95" height="125" rx="4" fill="#334155" /><text x="272" y="82" text-anchor="middle" fill="#cbd5e1" font-size="12">Carreta Dir.</text></svg>
               </div>
-
               <div class="cam-feed" onclick="toggleCameraExpand(this)">
-                <div class="cam-feed-head">
-                  <span>Câmera 03 · Ponto Cego Esquerdo</span>
-                  <span style="color:#fcd34d">Carro a 40 m</span>
-                </div>
-                <svg viewBox="0 0 320 140" style="width:100%;display:block">
-                  <rect width="320" height="140" rx="6" fill="#102030" />
-                  <rect width="320" height="55" rx="6" fill="#16324f" />
-                  <polygon points="110,55 280,55 320,140 80,140" fill="#26323f" />
-                  <rect x="0" y="15" width="95" height="125" rx="4" fill="#334155" />
-                  <text x="48" y="82" text-anchor="middle" fill="#cbd5e1" font-size="12">Carreta Esq.</text>
-                </svg>
+                <div class="cam-feed-head"><span>Câmera 03 · Ponto Cego Esquerdo</span><span style="color:#fcd34d">Carro a 40 m</span></div>
+                <svg viewBox="0 0 320 140" style="width:100%;display:block"><rect width="320" height="140" rx="6" fill="#102030" /><rect width="320" height="55" rx="6" fill="#16324f" /><polygon points="110,55 280,55 320,140 80,140" fill="#26323f" /><rect x="0" y="15" width="95" height="125" rx="4" fill="#334155" /><text x="48" y="82" text-anchor="middle" fill="#cbd5e1" font-size="12">Carreta Esq.</text></svg>
               </div>
-
               <div class="cam-feed" onclick="toggleCameraExpand(this)">
-                <div class="cam-feed-head">
-                  <span>Câmera 04 · Traseira / Lacre do Baú</span>
-                  <span style="color:#6ee7b7">Trava Satélite OK</span>
-                </div>
-                <svg viewBox="0 0 320 140" style="width:100%;display:block">
-                  <rect width="320" height="140" rx="6" fill="#102030" />
-                  <rect width="320" height="52" rx="6" fill="#16324f" />
-                  <polygon points="95,52 225,52 300,140 20,140" fill="#26323f" />
-                  <line x1="75" y1="125" x2="245" y2="125" stroke="#10b981" stroke-width="2" />
-                </svg>
+                <div class="cam-feed-head"><span>Câmera 04 · Traseira / Lacre do Baú</span><span style="color:#6ee7b7">Trava Satélite OK</span></div>
+                <svg viewBox="0 0 320 140" style="width:100%;display:block"><rect width="320" height="140" rx="6" fill="#102030" /><rect width="320" height="52" rx="6" fill="#16324f" /><polygon points="95,52 225,52 300,140 20,140" fill="#26323f" /><line x1="75" y1="125" x2="245" y2="125" stroke="#10b981" stroke-width="2" /></svg>
               </div>
             </div>
           </div>
 
-          <!-- TELA CARPLAY 4: TELEFONE, MENSAGENS POR VOZ E APOIO DA TORRE -->
+          <!-- TELA CARPLAY: TELEFONE E TORRE -->
           <div id="cpScreenPhone" class="hidden" style="flex:1">
             <div class="cp-apps-grid">
               <button type="button" class="cp-action-tile" onclick="triggerCarPlayCall('Torre de Controle 24h', 'Conectando chamada via Satélite Starlink com o operador da Torre de Controle.')">
@@ -678,32 +624,27 @@
                 <strong style="font-size:16px">Ligar p/ Torre de Controle</strong>
                 <span style="font-size:13px;color:#cbd5e1">Atendimento imediato sem tirar a mão do volante</span>
               </button>
-
-              <button type="button" class="cp-action-tile" onclick="triggerCarPlayCall('Mensagem da Transportadora', 'Lendo mensagem: Seu Carlos, vaga zero quatro e jantar já liberados no Posto Resende quilômetro cento e vinte.')">
+              <button type="button" class="cp-action-tile" onclick="triggerCarPlayCall('Mensagem da Transportadora', 'Seu Carlos, vaga zero quatro e jantar liberados no Posto Resende quilômetro cento e vinte.')">
                 <span class="text-sky" data-icon="message-square" data-size="28"></span>
                 <strong style="font-size:16px">Ouvir Recados (WhatsApp/Frota)</strong>
                 <span style="font-size:13px;color:#cbd5e1">Leitura por voz da vaga e senha de descarga</span>
               </button>
-
-              <button type="button" class="cp-action-tile" onclick="triggerCarPlayCall('Aviso para Família', 'Mensagem automática enviada para a família: Estou em viagem tranquila, previsão de parada às vinte e uma e quarenta.')">
+              <button type="button" class="cp-action-tile" onclick="triggerCarPlayCall('Aviso para Família', 'Localização segura enviada para a família.')">
                 <span class="text-emerald" data-icon="check-circle" data-size="28"></span>
                 <strong style="font-size:16px">Avisar Família: "Estou Bem"</strong>
                 <span style="font-size:13px;color:#cbd5e1">Envia localização segura com 1 toque</span>
               </button>
-
-              <button type="button" class="cp-action-tile" onclick="triggerCarPlayCall('Recepção Hub Km 120', 'Confirmando chegada em trinta e oito minutos no Hub Resende para troca de carreta.')">
+              <button type="button" class="cp-action-tile" onclick="triggerCarPlayCall('Recepção Hub Km 120', 'Confirmando chegada em trinta e oito minutos no Hub Resende.')">
                 <span class="text-sky" data-icon="map-pin" data-size="28"></span>
                 <strong style="font-size:16px">Confirmar Chegada no Hub</strong>
                 <span style="font-size:13px;color:#cbd5e1">Adiantamento de box sem fila no pátio</span>
               </button>
-
-              <button type="button" class="cp-action-tile" onclick="triggerCarPlayCall('Apoio Mecânico Preventivo', 'Solicitação enviada. Equipe de manutenção do próximo Hub já recebeu o diagnóstico do seu caminhão.')">
+              <button type="button" class="cp-action-tile" onclick="triggerCarPlayCall('Apoio Mecânico Preventivo', 'Diagnóstico do caminhão enviado para a oficina do próximo Hub.')">
                 <span class="text-amber" data-icon="wrench" data-size="28"></span>
                 <strong style="font-size:16px">Pedir Revisão Rápida</strong>
                 <span style="font-size:13px;color:#cbd5e1">Relatar barulho, freio ou pneu com 1 toque</span>
               </button>
-
-              <button type="button" class="cp-action-tile" onclick="triggerCarPlayCall('Emergência / Escolta', 'Alerta prioritário acionado na Torre de Controle. Posição via satélite monitorada segundo a segundo.')">
+              <button type="button" class="cp-action-tile" onclick="triggerCarPlayCall('Emergência / Escolta', 'Alerta prioritário acionado na Torre de Controle.')">
                 <span class="text-danger" data-icon="shield-alert" data-size="28"></span>
                 <strong style="font-size:16px">Botão SOS Segurança</strong>
                 <span style="font-size:13px;color:#cbd5e1">Aciona apoio policial e escolta da Torre</span>
@@ -711,49 +652,35 @@
             </div>
           </div>
 
-          <!-- TELA CARPLAY 5: APPS DE CABINE (LEI DO DESCANSO, CLIMA E COMBUSTÍVEL) -->
+          <!-- TELA CARPLAY: APPS DE CABINE -->
           <div id="cpScreenApps" class="hidden" style="flex:1">
             <div class="cp-apps-grid">
               <div class="cp-widget">
                 <h3 style="color:#7dd3fc">Lei do Descanso</h3>
                 <p class="mono-num" style="font-size:26px;font-weight:800;margin-top:6px;color:#6ee7b7" id="driverRestVal">Faltam 38 min</p>
-                <p style="font-size:13px;color:#cbd5e1;margin-top:6px">
-                  Parada garantida no <strong>Posto Resende (Km 120)</strong>. Quarto climatizado e refeição liberados.
-                </p>
+                <p style="font-size:13px;color:#cbd5e1;margin-top:6px">Parada garantida no Posto Resende (Km 120).</p>
               </div>
-
               <div class="cp-widget">
                 <h3 style="color:#fcd34d">Clima na Estrada Adiante</h3>
                 <p style="font-size:20px;font-weight:700;margin-top:6px;color:#ffffff">21 °C · Pista Seca no Desvio</p>
-                <p style="font-size:13px;color:#cbd5e1;margin-top:6px">
-                  Chuva forte isolada na antiga BR-X já evitada automaticamente pela sua rota segura.
-                </p>
+                <p style="font-size:13px;color:#cbd5e1;margin-top:6px">Tempestade na antiga BR-X evitada pela rota segura.</p>
               </div>
-
               <div class="cp-widget">
                 <h3 style="color:#6ee7b7">Tanque &amp; Autonomia</h3>
                 <p id="driverTankVal" style="font-size:20px;font-weight:700;margin-top:6px;color:#ffffff">Meio tanque (+410 km)</p>
-                <p style="font-size:13px;color:#cbd5e1;margin-top:6px">
-                  Abastecimento conveniado programado somente no Hub Resende com desconto de frota.
-                </p>
+                <p style="font-size:13px;color:#cbd5e1;margin-top:6px">Abastecimento programado no Hub Resende.</p>
               </div>
-
               <button type="button" class="cp-action-tile" onclick="switchCarPlayApp('split')">
                 <span class="text-sky" data-icon="layout" data-size="26"></span>
-                <strong style="font-size:15px">Voltar ao Painel + Mapa</strong>
-                <span style="font-size:12px;color:#cbd5e1">Tela dividida com GPS e alertas</span>
+                <strong style="font-size:15px">Voltar ao Painel + Google Maps</strong>
               </button>
-
               <button type="button" class="cp-action-tile" onclick="switchCarPlayApp('map')">
                 <span class="text-emerald" data-icon="compass" data-size="26"></span>
-                <strong style="font-size:15px">Abrir Google Maps Tela Cheia</strong>
-                <span style="font-size:12px;color:#cbd5e1">Visão ampla das faixas e estradas</span>
+                <strong style="font-size:15px">Google Maps Tela Cheia</strong>
               </button>
-
               <button type="button" class="cp-action-tile" onclick="switchCarPlayApp('cam')">
                 <span class="text-amber" data-icon="video" data-size="26"></span>
-                <strong style="font-size:15px">Abrir Câmeras RotaCAM</strong>
-                <span style="font-size:12px;color:#cbd5e1">Conferir pontos cegos e carreta</span>
+                <strong style="font-size:15px">Câmeras RotaCAM</strong>
               </button>
             </div>
           </div>

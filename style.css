@@ -24,10 +24,6 @@
   --accent-danger: #b91c1c;
   --accent-danger-soft: rgba(239, 68, 68, 0.2);
   --text-danger: #fca5a5;
-  --sign-blue-bg: #144596;
-  --sign-blue-border: #93c5fd;
-  --sign-green-bg: #0e5a38;
-  --sign-green-border: #86efac;
 }
 
 body.theme-day {
@@ -42,17 +38,9 @@ body.theme-day {
   --text-primary: #0f172a;
   --text-secondary: #1e293b;
   --text-muted: #475569;
-  --accent-sky: #0369a1;
-  --accent-sky-hover: #075985;
-  --accent-sky-soft: rgba(2, 132, 199, 0.14);
   --text-sky: #0369a1;
-  --accent-emerald: #047857;
-  --accent-emerald-hover: #065f46;
-  --accent-emerald-soft: rgba(5, 150, 105, 0.14);
   --text-emerald: #065f46;
-  --accent-amber-soft: rgba(217, 119, 6, 0.15);
   --text-amber: #92400e;
-  --accent-danger-soft: rgba(220, 38, 38, 0.14);
   --text-danger: #991b1b;
 }
 
@@ -78,7 +66,7 @@ body {
 }
 
 ::selection {
-  background-color: #0369a1;
+  background-color: #1a73e8;
   color: #ffffff;
 }
 
@@ -146,7 +134,7 @@ h3 {
 }
 
 .header-inner {
-  max-width: 1380px;
+  max-width: 1400px;
   margin: 0 auto;
   display: flex;
   flex-wrap: wrap;
@@ -196,7 +184,6 @@ h3 {
   gap: 8px;
 }
 
-/* Controls */
 button,
 select,
 input {
@@ -274,11 +261,6 @@ input:focus-visible {
   background-color: #fbbf24;
 }
 
-.btn-danger {
-  background-color: var(--accent-danger);
-  color: #ffffff;
-}
-
 .btn-full {
   width: 100%;
 }
@@ -292,9 +274,9 @@ input:focus-visible {
   padding: 1px 6px;
 }
 
-/* Main Container */
+/* Main Workspace */
 .app-main {
-  max-width: 1380px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 18px 20px;
 }
@@ -357,10 +339,10 @@ input:focus-visible {
 .text-amber { color: var(--text-amber); }
 .text-danger { color: var(--text-danger); }
 
-/* Tower Layout & Real Map */
+/* Tower Layout */
 .tower-grid {
   display: grid;
-  grid-template-columns: minmax(0, 2.15fr) minmax(330px, 1fr);
+  grid-template-columns: minmax(0, 2.25fr) minmax(330px, 1fr);
   gap: 18px;
   align-items: start;
 }
@@ -375,13 +357,6 @@ input:focus-visible {
   gap: 12px;
 }
 
-.route-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
 .input-field,
 .select-field {
   background-color: var(--bg-inset);
@@ -392,59 +367,234 @@ input:focus-visible {
   font-weight: 500;
 }
 
-.route-bar .select-field {
-  flex: 1;
-  min-width: 170px;
-}
-
-.real-map-frame {
+/* ==================== AUTHENTIC GOOGLE MAPS REAL-TIME VIEWPORT ==================== */
+.gmap-viewport {
   position: relative;
   width: 100%;
-  height: 510px;
-  border-radius: 10px;
+  height: 550px;
+  border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--border-strong);
-  background-color: #071019;
+  background-color: #aadaff;
+  user-select: none;
+  touch-action: none;
 }
 
-.map-canvas {
+.gmap-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.gmap-stage:active {
+  cursor: grabbing;
+}
+
+.gmap-stage.tilt-3d {
+  transform: perspective(760px) rotateX(27deg) scale(1.22);
+  transform-origin: 50% 68%;
+}
+
+.gmap-tiles-layer,
+.gmap-vector-canvas,
+.gmap-overlay-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
 }
 
-.map-style-bar {
+.gmap-overlay-svg {
+  pointer-events: auto;
+}
+
+/* Google Maps Top-Left Floating Directions Card */
+.gmap-directions-card {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 30;
+  width: 340px;
+  max-width: calc(100% - 24px);
+  background-color: #ffffff;
+  color: #202124;
+  border-radius: 10px;
+  border: 1px solid #dadce0;
+  padding: 12px;
+}
+
+.gmap-dir-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.gmap-select {
+  flex: 1;
+  background-color: #f1f3f4;
+  color: #202124;
+  border: 1px solid #dadce0;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.gmap-route-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e8eaed;
+}
+
+.gmap-eta-green {
+  font-size: 16px;
+  font-weight: 700;
+  color: #137333;
+}
+
+.gmap-eta-alert {
+  font-size: 16px;
+  font-weight: 700;
+  color: #c5221f;
+}
+
+.gmap-via-sub {
+  font-size: 12px;
+  color: #3c4043;
+  margin-top: 2px;
+}
+
+/* Google Maps Top-Right Pill Chips */
+.gmap-top-chips {
   position: absolute;
   top: 12px;
   right: 12px;
-  z-index: 500;
+  z-index: 30;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  background-color: rgba(11, 20, 30, 0.9);
-  padding: 6px;
-  border-radius: 8px;
-  border: 1px solid #2b445e;
 }
 
-.btn-map-chip {
-  background-color: #152536;
-  color: #f1f5f9;
-  border: 1px solid #29435c;
-  padding: 6px 10px;
+.gmap-pill-btn {
+  background-color: #ffffff;
+  color: #202124;
+  border: 1px solid #dadce0;
+  border-radius: 999px;
+  padding: 6px 12px;
   font-size: 12px;
   font-weight: 600;
-  border-radius: 6px;
   cursor: pointer;
 }
 
-.btn-map-chip:hover {
-  background-color: #1f354d;
+.gmap-pill-btn:hover {
+  background-color: #f1f3f4;
 }
 
-.btn-map-chip.active {
-  background-color: #0369a1;
-  border-color: #7dd3fc;
+.gmap-pill-btn.active {
+  background-color: #1967d2;
+  border-color: #1967d2;
   color: #ffffff;
+}
+
+/* Google Maps Bottom-Left Layer Switcher & Bottom-Center Live Traffic Bar */
+.gmap-layer-toggle {
+  position: absolute;
+  left: 12px;
+  bottom: 14px;
+  z-index: 30;
+  width: 68px;
+  height: 68px;
+  border-radius: 10px;
+  border: 2px solid #ffffff;
+  background-color: #1b3a2b;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 4px;
+}
+
+.gmap-traffic-legend {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 30;
+  background-color: #ffffff;
+  color: #202124;
+  border: 1px solid #dadce0;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.traffic-scale {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.traffic-scale span {
+  width: 14px;
+  height: 6px;
+  border-radius: 1px;
+  display: inline-block;
+}
+
+/* Google Maps Bottom-Right Zoom & My Location Stack */
+.gmap-zoom-stack {
+  position: absolute;
+  right: 12px;
+  bottom: 26px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gmap-ctrl-btn {
+  width: 38px;
+  height: 38px;
+  background-color: #ffffff;
+  color: #3c4043;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gmap-ctrl-btn:hover {
+  background-color: #f1f3f4;
+}
+
+.gmap-attrib {
+  position: absolute;
+  right: 8px;
+  bottom: 4px;
+  z-index: 25;
+  background-color: rgba(255, 255, 255, 0.88);
+  color: #202124;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
 }
 
 .map-dock {
@@ -461,6 +611,23 @@ input:focus-visible {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.btn-map-chip {
+  background-color: #152536;
+  color: #f1f5f9;
+  border: 1px solid #29435c;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-map-chip.active {
+  background-color: #0369a1;
+  border-color: #7dd3fc;
+  color: #ffffff;
 }
 
 .legend-list {
@@ -487,36 +654,10 @@ input:focus-visible {
 
 .dot-emerald { background-color: #10b981; }
 .dot-amber { background-color: #f59e0b; }
-.dot-sky { background-color: #38bdf8; }
-.dot-danger { background-color: #ef4444; }
+.dot-sky { background-color: #1a73e8; }
+.dot-danger { background-color: #ea4335; }
 
-/* Custom Truck Marker on Real Map */
-.rp-truck-marker {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background-color: rgba(9, 16, 24, 0.92);
-  color: #f8fafc;
-  border: 1.5px solid #38bdf8;
-  border-radius: 999px;
-  padding: 3px 8px;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.rp-hub-marker {
-  background-color: #0369a1;
-  color: #ffffff;
-  border: 1.5px solid #bae6fd;
-  border-radius: 6px;
-  padding: 3px 7px;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-/* Status Pills & Divider Lists */
+/* Pills & Lists */
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -560,16 +701,10 @@ input:focus-visible {
   font-size: 12px;
 }
 
-.metrics-2col dt {
-  color: var(--text-secondary);
-}
+.metrics-2col dt { color: var(--text-secondary); }
+.metrics-2col dd { font-weight: 700; margin-top: 2px; }
 
-.metrics-2col dd {
-  font-weight: 700;
-  margin-top: 2px;
-}
-
-/* ==================== ABA 2: INSPEÇÃO IA DO CAMINHÃO (BLUEPRINT HUD) ==================== */
+/* ==================== INSPEÇÃO IA DO CAMINHÃO (BLUEPRINT HUD) ==================== */
 .inspector-grid {
   display: grid;
   grid-template-columns: minmax(270px, 1fr) minmax(340px, 1.35fr) minmax(300px, 1.15fr);
@@ -595,9 +730,7 @@ input:focus-visible {
   display: block;
 }
 
-.comp-hotspot {
-  cursor: pointer;
-}
+.comp-hotspot { cursor: pointer; }
 
 .part-btn {
   width: 100%;
@@ -615,13 +748,8 @@ input:focus-visible {
   border-radius: 6px;
 }
 
-.part-btn:hover {
-  background-color: var(--bg-control);
-}
-
-.part-btn.selected {
-  background-color: var(--accent-sky-soft);
-}
+.part-btn:hover { background-color: var(--bg-control); }
+.part-btn.selected { background-color: var(--accent-sky-soft); }
 
 .health-bar-track {
   width: 100%;
@@ -638,9 +766,9 @@ input:focus-visible {
   transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* ==================== ABA 3: CENTRAL MULTIMÍDIA ESTILO CARPLAY ==================== */
+/* ==================== CENTRAL MULTIMÍDIA CARPLAY + GOOGLE MAPS NAVIGATION ==================== */
 .carplay-shell {
-  max-width: 1260px;
+  max-width: 1280px;
   margin: 0 auto;
   background-color: #0b1118;
   color: #f8fafc;
@@ -650,10 +778,9 @@ input:focus-visible {
   display: grid;
   grid-template-columns: 78px minmax(0, 1fr);
   gap: 14px;
-  min-height: 610px;
+  min-height: 615px;
 }
 
-/* CarPlay Left Vertical Dock */
 .carplay-dock {
   background-color: #111b27;
   border: 1px solid #223449;
@@ -666,22 +793,9 @@ input:focus-visible {
   gap: 10px;
 }
 
-.cp-status-stack {
-  text-align: center;
-  font-size: 12px;
-}
-
-.cp-clock {
-  font-size: 15px;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.cp-signal {
-  font-size: 12px;
-  color: #6ee7b7;
-  font-weight: 600;
-}
+.cp-status-stack { text-align: center; font-size: 12px; }
+.cp-clock { font-size: 15px; font-weight: 700; color: #ffffff; }
+.cp-signal { font-size: 12px; color: #6ee7b7; font-weight: 600; }
 
 .cp-app-icons {
   display: flex;
@@ -709,23 +823,10 @@ input:focus-visible {
   font-weight: 600;
 }
 
-.cp-icon-btn:hover {
-  background-color: #21374f;
-}
+.cp-icon-btn:hover { background-color: #21374f; }
+.cp-icon-btn.active { background-color: #0369a1; border-color: #7dd3fc; color: #ffffff; }
+.cp-voice-btn { background-color: #047857; border-color: #6ee7b7; color: #ffffff; }
 
-.cp-icon-btn.active {
-  background-color: #0369a1;
-  border-color: #7dd3fc;
-  color: #ffffff;
-}
-
-.cp-voice-btn {
-  background-color: #047857;
-  border-color: #6ee7b7;
-  color: #ffffff;
-}
-
-/* CarPlay Main Workspace */
 .carplay-stage {
   display: flex;
   flex-direction: column;
@@ -735,7 +836,7 @@ input:focus-visible {
 
 .cp-split-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 1fr);
+  grid-template-columns: minmax(0, 1.42fr) minmax(300px, 1fr);
   gap: 14px;
   flex: 1;
 }
@@ -745,63 +846,97 @@ input:focus-visible {
   border-radius: 14px;
   overflow: hidden;
   border: 1px solid #263b52;
-  background-color: #08121c;
-  min-height: 460px;
+  background-color: #aadaff;
+  min-height: 495px;
   display: flex;
   flex-direction: column;
 }
 
-.cp-map-canvas {
+.cp-map-viewport {
+  position: relative;
   flex: 1;
   width: 100%;
-  min-height: 360px;
+  min-height: 410px;
+  overflow: hidden;
 }
 
-/* Highway Road Sign Overlay inside CarPlay Map */
-.cp-nav-overlay {
+/* Official Google Maps Green Turn-by-Turn Banner inside CarPlay */
+.gmap-turn-banner {
   position: absolute;
   top: 12px;
   left: 12px;
-  right: 12px;
-  z-index: 500;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  z-index: 40;
+  width: 310px;
+  max-width: calc(100% - 24px);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #094c22;
+}
+
+.gmap-turn-main {
+  background-color: #0d652d;
+  color: #ffffff;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gmap-turn-lanes {
+  background-color: #08471f;
+  color: #e6f4ea;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Speedometer + Speed Limit Sign on CarPlay Google Maps */
+.gmap-speed-Cluster {
+  position: absolute;
+  left: 12px;
+  bottom: 14px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
   gap: 8px;
-  pointer-events: none;
+  background-color: #ffffff;
+  color: #202124;
+  border: 1px solid #dadce0;
+  border-radius: 12px;
+  padding: 8px 12px;
 }
 
-.cp-turn-box {
-  background-color: rgba(9, 16, 24, 0.94);
-  color: #ffffff;
-  border: 2px solid #476582;
-  border-radius: 10px;
-  padding: 10px 14px;
-  text-align: center;
+.speed-limit-ring {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 4px solid #d93025;
+  background-color: #ffffff;
+  color: #202124;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
 }
 
-.cp-road-sign {
-  background-color: rgba(20, 69, 150, 0.95);
-  color: #ffffff;
-  border: 2px solid #93c5fd;
-  border-radius: 10px;
-  padding: 10px 14px;
+.cp-map-tools {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 40;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-}
-
-.cp-hub-sign {
-  background-color: rgba(14, 90, 56, 0.95);
-  color: #ffffff;
-  border: 2px solid #86efac;
-  border-radius: 10px;
-  padding: 10px 14px;
-  text-align: center;
+  gap: 8px;
 }
 
 .cp-eta-bar {
-  background-color: #0e1925;
-  border-top: 1px solid #23374d;
+  background-color: #ffffff;
+  color: #202124;
+  border-top: 1px solid #dadce0;
   padding: 10px 16px;
   display: flex;
   flex-wrap: wrap;
@@ -837,7 +972,6 @@ input:focus-visible {
   margin-top: 10px;
 }
 
-/* CarPlay Apps Grid & Comms */
 .cp-apps-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -857,11 +991,8 @@ input:focus-visible {
   gap: 8px;
 }
 
-.cp-action-tile:hover {
-  background-color: #1a2c40;
-}
+.cp-action-tile:hover { background-color: #1a2c40; }
 
-/* RotaCAM Grid */
 .cam-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -877,9 +1008,7 @@ input:focus-visible {
   cursor: pointer;
 }
 
-.cam-feed.expanded {
-  grid-column: 1 / -1;
-}
+.cam-feed.expanded { grid-column: 1 / -1; }
 
 .cam-feed-head {
   display: flex;
@@ -899,7 +1028,6 @@ input:focus-visible {
   border-radius: 4px;
 }
 
-/* Google API Config Drawer (Inline progressive disclosure, no modal) */
 .api-drawer {
   background-color: var(--bg-panel);
   border: 1px solid var(--border-strong);
@@ -913,7 +1041,6 @@ input:focus-visible {
   gap: 12px;
 }
 
-/* Toast */
 .sys-toast {
   position: fixed;
   right: 20px;
@@ -930,33 +1057,13 @@ input:focus-visible {
 }
 
 @media (max-width: 1120px) {
-  .kpi-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .tower-grid,
-  .inspector-grid,
-  .cp-split-grid {
-    grid-template-columns: 1fr;
-  }
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tower-grid, .inspector-grid, .cp-split-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 720px) {
-  .carplay-shell {
-    grid-template-columns: 1fr;
-  }
-  .carplay-dock {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-  .cp-app-icons {
-    flex-direction: row;
-    flex-wrap: wrap;
-    width: auto;
-  }
-  .kpi-grid,
-  .cam-grid,
-  .cp-apps-grid,
-  .cp-nav-overlay {
-    grid-template-columns: 1fr;
-  }
+  .carplay-shell { grid-template-columns: 1fr; }
+  .carplay-dock, .cp-app-icons { flex-direction: row; flex-wrap: wrap; width: auto; }
+  .kpi-grid, .cam-grid, .cp-apps-grid { grid-template-columns: 1fr; }
+  .gmap-traffic-legend { display: none; }
 }
