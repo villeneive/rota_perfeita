@@ -3,40 +3,40 @@
 Documentação executiva e de engenharia do sistema **Rota Perfeita** (Torre de Controle Logística com IA Preditiva, Gêmeo Digital, Telemetria Satelital LEO e Multimídia de Cabine).
 
 - **Aplicação Web Pronta (HTML + CSS + JS Externos):** [`index.html`](./index.html) · [`style.css`](./style.css) · [`script.js`](./script.js)
+- **Proposta Comercial Detalhada (Teto `R$ 12M` · 650 Caminhões · Equipe Truck Tracker):** [`PROPOSTA_ORCAMENTARIA_12M.md`](./PROPOSTA_ORCAMENTARIA_12M.md)
 
 ---
 
-## 1. Proposta Comercial e Justificativa Técnica
+## 1. Proposta Comercial e Justificativa Técnica (Equipe Truck Tracker)
 
-### 1.1 Problema vs. Solução (Base: Frota de 500 Caminhões Pesados)
+### 1.1 Problema vs. Solução (Base: Modernização de 650 Caminhões Pesados)
 
-| Dor Operacional | Solução Rota Perfeita | Impacto / ROI Mensurável |
+| Dor Operacional | Solução Rota Perfeita (Truck Tracker) | Impacto / ROI Mensurável |
 |---|---|---|
-| Alto consumo de diesel e desgaste prematuro | Telemetria OBD-II/CAN J1939 + sensores capacitivos de tanque + Copiloto Eco-Driving IA GOAT | Redução de R$ 5,94/km para **R$ 4,82/km** (-18,8% a -21%) |
-| Frete morto (retorno vazio ~38% das viagens) | Motor geoespacial de Match de Retorno em tempo real no corredor da rota | Ocupação de retorno elevada para **>94%** (+28% margem líquida) |
-| Roubo de carga e sinistros climáticos | Bloqueio dinâmico de rodovias por mancha criminal horária + radar meteorológico + trava satelital | **-92% em sinistros** e -35% no prêmio de seguro (RCTR-C/RC-DC) |
+| Alto consumo de diesel e desgaste prematuro | Telemetria OBD-II/CAN J1939 + sensores capacitivos de tanque + Copiloto Eco-Driving IA GOAT | Economia conservadora de **-8,5% a -18,8%** em diesel (`R$ 1,18M/mês`) |
+| Frete morto (retorno vazio ~38% das viagens) | Motor geoespacial de Match de Retorno em tempo real no corredor da rota | Alocação de retorno elevando margem líquida (`+R$ 585 mil/mês`) |
+| Roubo de carga e sinistros climáticos | Bloqueio dinâmico de rodovias por mancha criminal horária + radar meteorológico + trava eletrônica | **-92% em sinistros** e queda em manutenção corretiva/seguro (`+R$ 347,5 mil/mês`) |
 | Ociosidade por Lei do Descanso (Lei 13.103/2015) | Orquestração *drop-and-hook* em Hubs de revezamento (troca de carreta/motorista) | Ativo rodando **22h/dia** legalmente (+40% giro de frota) |
 | Restrições urbanas de peso (ZMRC) e quebras | Sugestão automática de baldeação p/ VUC + Manutenção Preditiva via Gêmeo Digital | **-78% em panes na estrada** e -22% no custo de última milha |
 
-- **Payback Estimado:** 7,4 meses | **ROI em 24 meses:** 342% (economia líquida anual projetada: R$ 54,8 milhões).
+- **Payback Estimado:** 5,6 meses | **ROI Líquido no Ano 1:** 114,1% (benefício operacional consolidado de `R$ 25,35 milhões/ano` na frota de 650 caminhões).
 
 ### 1.2 Stack Tecnológica Enterprise
 
-- **IA Preditiva ("IA GOAT") & Roteirização:** Cluster Cloud GPU NVIDIA H200 + NVIDIA cuOpt (VRP dinâmico `< 500 ms`) + PyTorch / TensorRT + Apache Kafka & Apache Flink.
-- **Digital Twin (Gêmeo Digital):** NVIDIA Omniverse / Azure Digital Twins sincronizado a 10 Hz por veículo (motor, freios, pneus TPMS, suspensão e consumo).
-- **Telemetria IoT & Borda (Edge AI):** Módulo embarcado NVIDIA Jetson Orin Nano + interface CAN-Bus SAE J1939 / OBD-II + sensor ultrassônico/capacitivo de diesel (`±0,2%`) + **RotaCAM** (4 câmeras PoE Full-HD IR com visão computacional ADAS/DMS).
-- **Conectividade Híbrida:** Antenas planas **Starlink Flat High Performance (LEO)** em movimento + Dual-SIM 5G Multi-Operadora com failover SD-WAN sub-segundo + cache SQLite criptografado em borda.
-- **Segurança & Cabine:** HSM Automotivo TPM 2.0, mTLS 1.3 + AES-256-GCM; Central Multimídia 10" antirreflexo Android Automotive com síntese e comando de voz offline.
+- **IA Preditiva ("IA GOAT") & Roteirização:** Cluster Cloud GPU sob demanda + otimização VRP dinâmica (`< 500 ms`) + PyTorch / TensorRT + mensageria MQTT/Kafka.
+- **Digital Twin (Gêmeo Digital):** Réplica 1:1 sincronizada por veículo (motor, freios, pneus TPMS, suspensão e consumo).
+- **Telemetria IoT & Borda (Edge AI):** Gateway embarcado CAN-Bus SAE J1939 / OBD-II + sonda capacitiva de diesel + **RotaCAM** (MDVR SSD + 4 câmeras IP68 Full-HD IR com visão computacional ADAS/DMS).
+- **Conectividade Híbrida Realista:** Dual-SIM 5G/4G Multi-Operadora + contingência satelital M2M nos **650 caminhões**, somada a **100 antenas satelitais LEO (Starlink Mobilidade)** dedicadas à subfrota de rotas críticas sem cobertura celular (Norte/Centro-Oeste).
+- **Segurança & Cabine:** mTLS 1.3 + AES-256-GCM; Central Multimídia industrial 10" antirreflexo 24V (padrão CarPlay) com GPS offline e comando de voz.
 
-### 1.3 Orçamento Estimado — Ano 1 (500 Caminhões)
+### 1.3 Orçamento Consolidado — Ano 1 (Teto `R$ 12M` · 650 Caminhões Equipados)
 
-| Categoria | Investimento (Ano 1) | Justificativa Técnica |
-|---|---|---|
-| Infraestrutura Cloud & Cluster GPU IA | R$ 4.800.000 | Instâncias NVIDIA H200 redundantes multi-região, streaming Kafka/Flink e réplicas Digital Twin em tempo real (`<500 ms` p99). |
-| Hardware IoT, RotaCAM & Satélite LEO | R$ 11.250.000 | Kits por caminhão (Jetson Orin Edge, terminal Starlink móvel, 4 câmeras RotaCAM IR, leitor CAN J1939, sensores de tanque e TPM 2.0). |
-| Desenvolvimento & Engenharia Sênior | R$ 6.400.000 | Squads dedicadas (Arquitetura Distribuída, MLOps/Visão Computacional, Engenharia Embarcada CAN, UX Cabine Nielsen, SecOps). |
-| Licenças de APIs & Dados Externos | R$ 1.550.000 | Mapas HD logísticos (restrição de altura/peso/pedágio por eixo), radar meteorológico hiperlocal, bases de inteligência criminal SSP/seguradoras e bolsas de frete. |
-| **Total CAPEX + OPEX Ano 1** | **R$ 24.000.000** | **Retorno bruto anual de ~R$ 54,8M em economia de diesel, frete de retorno e queda de sinistralidade.** |
+| Bloco Orçamentário | Investimento (Ano 1) | % | Justificativa Técnica e Comercial |
+|---|---:|---:|---|
+| **A. Tecnologia Embarcada nos Caminhões (650 un.)** | `R$ 7.704.500,00` | 65,1% | Multimídia 10" CarPlay, gateway CAN/Edge AI, 4 câmeras RotaCAM SSD, sensores IoT, Dual-SIM 5G/Satélite M2M, 100 terminais LEO, instalação 24V e 20 kits reserva (`R$ 11.853,08`/caminhão). |
+| **B. Infraestrutura Cloud, GPU & APIs (12m)** | `R$ 1.056.000,00` | 8,9% | Cluster Cloud/GPU elástico, licenças Google Maps Routes/Traffic API, radar climático/risco e mensageria IoT segura (`R$ 88.000,00`/mês). |
+| **C. Equipe Truck Tracker (Aplicações, IA & SaaS)** | `R$ 3.078.000,00` | 26,0% | Desenvolvimento Torre Web, App CarPlay/CAN, IA Preditiva, rollout em pátio e licença SaaS + suporte 24x7 (`R$ 110`/cam/mês), gerando **`R$ 1.222.000,00` de lucro líquido** p/ a Truck Tracker no Ano 1 + ARR de `R$ 858 mil/ano`. |
+| **Total Global Turnkey (Ano 1)** | **`R$ 11.838.500,00`** | **100%** | **Respeita o teto de `R$ 12.000.000,00` (folga de `R$ 161.500,00`) com foco em volume de caminhões.** |
 
 ### 1.4 Cronograma Macro de Execução (12 Sprints / 24 Semanas)
 
@@ -45,7 +45,7 @@ Documentação executiva e de engenharia do sistema **Rota Perfeita** (Torre de 
 | 1. Fundação & Telemetria Edge | Sprints 1–3 | Ingestão CAN/OBD-II + sensores de tanque, failover 5G/Starlink e segurança mTLS/TPM 2.0 | Telemetria Real-Time |
 | 2. Gêmeo Digital & IA GOAT | Sprints 4–6 | Réplica Digital Twin da frota, modelos preditivos de falha/consumo e motor NVIDIA cuOpt (`<500 ms`) | Motor Preditivo Ativo |
 | 3. Reversa, Hubs & Risco | Sprints 7–9 | Match de frete de retorno, orquestrador de revezamento/baldeação VUC e bloqueio dinâmico de risco | Torre de Controle Web |
-| 4. Cabine UX & Rollout Nacional | Sprints 10–12 | Multimídia GPS + RotaCAM validado pelas Heurísticas de Nielsen, piloto em 50 carretas e escala p/ 500 | **Go-Live Nacional** |
+| 4. Cabine UX & Rollout Nacional | Sprints 10–12 | Multimídia GPS + RotaCAM validado pelas Heurísticas de Nielsen, piloto em 50 carretas e escala p/ 650 caminhões | **Go-Live Nacional** |
 
 ---
 
