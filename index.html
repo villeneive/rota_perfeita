@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rota Perfeita | Torre de Controle IA & Guia Multimídia</title>
+  <meta name="description" content="Torre de Controle Logística com IA Preditiva, Gêmeo Digital e Guia Multimídia de Cabine para frotas pesadas no Brasil." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      background-color: #0b1219;
+      color: #f1f5f9;
+    }
+    h1 { font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; }
+    h2 { font-size: 17px; line-height: 1.35; letter-spacing: -0.01em; }
+    h3 { font-size: 15px; line-height: 1.4; }
+    ::selection { background: #0284c7; color: #ffffff; }
+    .mono-num { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
+    .panel { background-color: #111b26; border: 1px solid #1e2d3d; border-radius: 12px; padding: 16px; }
+    .map-surface { background-color: #091017; border: 1px solid #1e2d3d; border-radius: 12px; padding: 16px; }
+    .road-sign-blue { background-color: #15469b; border: 2px solid #93c5fd; border-radius: 10px; padding: 12px; }
+    .road-sign-green { background-color: #0f5c3a; border: 2px solid #86efac; border-radius: 10px; padding: 12px; }
+    button:focus-visible { outline: 2px solid #38bdf8; outline-offset: 2px; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0b1219; }
+    ::-webkit-scrollbar-thumb { background: #283a4e; border-radius: 4px; }
+  </style>
+</head>
+<body class="min-h-screen antialiased">
+  <!-- Barra Principal -->
+  <header class="border-b border-[#1e2d3d] bg-[#0e1721] px-4 py-3 sm:px-6">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-600 text-white">
+          <i data-lucide="radar" class="h-5 w-5"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-slate-100">Rota Perfeita</h1>
+          <p class="text-xs text-slate-300">IA GOAT · Telemetria CAN + Satélite LEO (<span id="latencyReadout" class="mono-num text-emerald-300">142 ms</span>)</p>
+        </div>
+      </div>
+
+      <!-- Abas de Navegação -->
+      <nav aria-label="Visões do sistema" class="flex items-center gap-2 rounded-lg bg-[#091017] p-1 border border-[#1e2d3d]">
+        <button id="tabTowerBtn" type="button" onclick="switchMainView('tower')" class="flex items-center gap-2 rounded-md bg-sky-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors">
+          <i data-lucide="globe" class="h-4 w-4"></i>
+          <span>Torre de Controle (Web)</span>
+        </button>
+        <button id="tabDriverBtn" type="button" onclick="switchMainView('driver')" class="flex items-center gap-2 rounded-md px-3.5 py-2 text-sm font-semibold text-slate-200 hover:bg-[#162332] transition-colors">
+          <i data-lucide="navigation" class="h-4 w-4"></i>
+          <span>Visão Motorista (Multimídia)</span>
+          <span id="driverAlertBadge" class="hidden rounded bg-amber-500 px-1.5 py-0.5 text-xs font-bold text-slate-950">1</span>
+        </button>
+      </nav>
+
+      <!-- Gatilho de Simulação IA -->
+      <div class="flex items-center gap-2">
+        <button id="simRiskBtn" type="button" onclick="simulateRiskEvent()" class="flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-400 transition-colors">
+          <i data-lucide="shield-alert" class="h-4 w-4"></i>
+          <span id="simRiskLabel">Simular Alerta de Risco / Recálculo IA</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-4 py-5 sm:px-6">
+    <!-- ==================== ABA 1: TORRE DE CONTROLE ==================== -->
+    <section id="viewTower" aria-label="Painel Torre de Controle" class="space-y-5">
+      <!-- KPIs Executivos -->
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="panel p-4">
+          <div class="flex items-center justify-between text-xs font-medium text-slate-300">
+            <span>Custo Real Médio / km (Frota)</span>
+            <i data-lucide="fuel" class="h-4 w-4 text-emerald-400"></i>
+          </div>
+          <p id="kpiCostKm" class="mono-num mt-2 text-2xl font-semibold text-slate-100">R$ 4,82/km</p>
+          <p id="kpiCostSub" class="mt-1 text-xs text-emerald-300">-18,8% vs média histórica (R$ 5,94)</p>
+        </div>
+
+        <div class="panel p-4">
+          <div class="flex items-center justify-between text-xs font-medium text-slate-300">
+            <span>Economia Acumulada IA (30d)</span>
+            <i data-lucide="trending-down" class="h-4 w-4 text-sky-400"></i>
+          </div>
+          <p id="kpiSavings" class="mono-num mt-2 text-2xl font-semibold text-slate-100">R$ 418.400</p>
+          <p class="mt-1 text-xs text-slate-300">Diesel + prevenção de panes + retorno</p>
+        </div>
+
+        <div class="panel p-4">
+          <div class="flex items-center justify-between text-xs font-medium text-slate-300">
+            <span>Aproveitamento de Retorno</span>
+            <i data-lucide="repeat" class="h-4 w-4 text-amber-400"></i>
+          </div>
+          <p id="kpiBackhaul" class="mono-num mt-2 text-2xl font-semibold text-slate-100">88,4%</p>
+          <p id="kpiBackhaulSub" class="mt-1 text-xs text-amber-300">1 carreta vazia detectada (CAM-04)</p>
+        </div>
+
+        <div class="panel p-4">
+          <div class="flex items-center justify-between text-xs font-medium text-slate-300">
+            <span>Score de Risco Dinâmico</span>
+            <i data-lucide="shield-check" class="h-4 w-4 text-emerald-400"></i>
+          </div>
+          <p id="kpiRisk" class="mono-num mt-2 text-2xl font-semibold text-emerald-300">18 / 100</p>
+          <p id="kpiRiskSub" class="mt-1 text-xs text-slate-300">0 trechos bloqueados no momento</p>
+        </div>
+      </div>
+
+      <!-- Mapa Dinâmico do Brasil + Inspetor Lateral -->
+      <div class="grid grid-cols-1 gap-5 lg:grid-cols-12">
+        <!-- Mapa estilo Radar Logístico Nacional -->
+        <div class="map-surface flex flex-col justify-between p-4 lg:col-span-8">
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#1e2d3d]">
+            <div>
+              <h2 class="text-base font-semibold text-slate-100">Radar Nacional da Frota em Tempo Real (Brasil)</h2>
+              <p class="text-xs text-slate-300">Clique em um caminhão no mapa para inspecionar o Gêmeo Digital e telemetria OBD-II</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 text-xs text-slate-200">
+              <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>Rota ótima</span>
+              <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span>Retorno vazio</span>
+              <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-sky-400"></span>Hub / Baldeação</span>
+              <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-red-500"></span>Bloqueio risco</span>
+            </div>
+          </div>
+
+          <!-- Canvas SVG do Mapa do Brasil -->
+          <div class="relative my-3 w-full overflow-x-auto">
+            <svg id="brazilMapSvg" viewBox="0 0 760 520" class="w-full h-auto min-w-[560px]" role="img" aria-label="Mapa dinâmico de movimentação de caminhões no Brasil">
+              <!-- Contorno estilizado da América do Sul / Vizinhos -->
+              <path d="M90,30 L260,20 L340,55 L340,120 L180,490 L80,480 Z" fill="#0d1620" stroke="#182635" stroke-width="1.2" />
+              <!-- Território do Brasil -->
+              <path d="M165,145 L245,82 L348,68 L442,98 L555,145 L645,192 L630,268 L572,332 L525,392 L455,442 L405,492 L352,462 L345,395 L285,342 L242,278 L175,235 Z" fill="#13202e" stroke="#2b4257" stroke-width="2" />
+
+              <!-- Malha Rodoviária Federal Principal -->
+              <g id="layerHighways" stroke="#294156" stroke-width="2.2" fill="none">
+                <!-- BR-116 / BR-101 Sul-Sudeste-Nordeste -->
+                <path d="M405,482 L442,428 L475,388 L528,362 L575,292 L628,212" />
+                <!-- BR-116 Trecho Serra Crítico (SP-RJ) -->
+                <path id="br116DangerSeg" d="M475,388 L528,362" stroke="#294156" stroke-width="3" />
+                <!-- Desvio Seguro IA (SP-070 / Via Patrulhada) -->
+                <path id="safeDetourPath" d="M475,388 Q495,345 528,362" stroke="#10b981" stroke-width="3" stroke-dasharray="6 4" class="hidden" />
+                <!-- BR-050 / BR-153 Centro-Oeste <-> SP -->
+                <path d="M475,388 L452,335 L432,292 L438,215 L445,125" />
+                <!-- BR-364 Mato Grosso <-> Rondônia/Acre -->
+                <path d="M432,292 L338,272 L235,222" />
+                <!-- BR-040 SP/MG/BSB -->
+                <path d="M528,362 L505,318 L455,282" />
+              </g>
+
+              <!-- Camada Clima & Mancha de Risco (Oculta até ativar filtro ou simulação) -->
+              <g id="layerRiskZone" class="hidden">
+                <circle cx="502" cy="375" r="26" fill="#ef4444" fill-opacity="0.22" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4 3" />
+                <text x="502" y="415" text-anchor="middle" fill="#fca5a5" font-size="12" font-weight="600">BR-X Bloqueada (22h · Chuva)</text>
+              </g>
+
+              <!-- Camada Hubs de Revezamento & Baldeação -->
+              <g id="layerHubs">
+                <g transform="translate(505,368)">
+                  <rect x="-7" y="-7" width="14" height="14" rx="3" fill="#0ea5e9" stroke="#e0f2fe" stroke-width="1.5" />
+                  <text x="12" y="4" fill="#bae6fd" font-size="12" font-weight="600">Hub Km 120 (Resende)</text>
+                </g>
+                <g transform="translate(466,392)">
+                  <rect x="-6" y="-6" width="12" height="12" rx="3" fill="#38bdf8" stroke="#e0f2fe" stroke-width="1.2" />
+                  <text x="-12" y="18" text-anchor="end" fill="#bae6fd" font-size="12">Hub VUC (SP)</text>
+                </g>
+                <g transform="translate(452,335)">
+                  <rect x="-6" y="-6" width="12" height="12" rx="3" fill="#f59e0b" stroke="#fef3c7" stroke-width="1.2" />
+                  <text x="-10" y="4" text-anchor="end" fill="#fde68a" font-size="12">Carga Uberlândia (18t)</text>
+                </g>
+              </g>
+
+              <!-- Capitais / Referências Geográficas -->
+              <g fill="#94a3b8" font-size="12">
+                <text x="242" y="168">Manaus</text>
+                <text x="452" y="122">Belém</text>
+                <text x="634" y="210">Recife</text>
+                <text x="582" y="294">Salvador</text>
+                <text x="318" y="264">Cuiabá</text>
+                <text x="415" y="280">Goiânia</text>
+                <text x="515" y="320">BH</text>
+                <text x="538" y="366">Rio</text>
+                <text x="482" y="405">São Paulo</text>
+                <text x="415" y="438">Curitiba</text>
+                <text x="360" y="495">Porto Alegre</text>
+              </g>
+
+              <!-- Camada Dinâmica de Caminhões (Renderizada via JS) -->
+              <g id="trucksLayer"></g>
+            </svg>
+          </div>
+
+          <!-- Barra Inferior de Controle do Mapa (Inspirada no Flightradar) -->
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#1e2d3d]">
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="button" onclick="toggleMapLayer('hubs')" id="btnLayerHubs" class="inline-flex items-center gap-1.5 rounded-md bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white">
+                <i data-lucide="git-fork" class="h-3.5 w-3.5"></i>
+                <span>Hubs & Baldeação</span>
+              </button>
+              <button type="button" onclick="toggleMapLayer('risk')" id="btnLayerRisk" class="inline-flex items-center gap-1.5 rounded-md bg-[#162332] px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-[#1f3145]">
+                <i data-lucide="cloud-lightning" class="h-3.5 w-3.5"></i>
+                <span>Clima & Risco</span>
+              </button>
+              <button type="button" onclick="selectTruck('CAM-04')" class="inline-flex items-center gap-1.5 rounded-md bg-[#162332] px-3 py-1.5 text-xs font-semibold text-amber-300 hover:bg-[#1f3145]">
+                <i data-lucide="package-plus" class="h-3.5 w-3.5"></i>
+                <span>Focar CAM-04 (Vazio)</span>
+              </button>
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="toggleSimulationSpeed()" id="btnSimSpeed" class="inline-flex items-center gap-1.5 rounded-md bg-[#162332] px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-[#1f3145]">
+                <i data-lucide="fast-forward" class="h-3.5 w-3.5"></i>
+                <span id="simSpeedText">Velocidade Mapa: 1x</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Coluna Direita: Gêmeo Digital + Frete de Retorno + Revezamento -->
+        <div class="space-y-4 lg:col-span-4">
+          <!-- Inspetor Gêmeo Digital (Inspirado na Imagem 1) -->
+          <div class="panel p-4">
+            <div class="flex items-center justify-between border-b border-[#1e2d3d] pb-2.5">
+              <div>
+                <h2 id="twinTitle" class="text-sm font-semibold text-slate-100">Gêmeo Digital · CAM-01 (Carreta 6 Eixos)</h2>
+                <p id="twinRoute" class="text-xs text-slate-300">São Paulo → Rio de Janeiro · Mot. Carlos Silva</p>
+              </div>
+              <span id="twinBadge" class="rounded bg-emerald-500/20 px-2 py-0.5 text-xs font-semibold text-emerald-300">Saúde 98%</span>
+            </div>
+
+            <!-- Blueprint Top-Down Vetorial do Caminhão -->
+            <div class="my-3 flex items-center gap-3 rounded-lg bg-[#091017] p-3">
+              <svg viewBox="0 0 120 200" class="h-32 w-20 shrink-0" aria-label="Esquema superior de telemetria do caminhão">
+                <!-- Semirreboque -->
+                <rect x="28" y="68" width="64" height="118" rx="6" fill="#102334" stroke="#38bdf8" stroke-width="2" />
+                <!-- Cavalo Mecânico -->
+                <path d="M32,62 L32,26 Q32,14 60,14 Q88,14 88,26 L88,62 Z" fill="#132f44" stroke="#10b981" stroke-width="2" />
+                <!-- Para-brisa -->
+                <path d="M38,28 Q60,22 82,28 L80,36 L40,36 Z" fill="#0ea5e9" fill-opacity="0.45" />
+                <!-- Eixos e Pneus TPMS -->
+                <rect x="20" y="44" width="8" height="16" rx="2" fill="#10b981" />
+                <rect x="92" y="44" width="8" height="16" rx="2" fill="#10b981" />
+                <rect x="20" y="136" width="8" height="14" rx="2" fill="#38bdf8" />
+                <rect x="92" y="136" width="8" height="14" rx="2" fill="#38bdf8" />
+                <rect x="20" y="154" width="8" height="14" rx="2" fill="#38bdf8" />
+                <rect x="92" y="154" width="8" height="14" rx="2" fill="#38bdf8" />
+                <rect x="20" y="172" width="8" height="14" rx="2" fill="#38bdf8" />
+                <rect x="92" y="172" width="8" height="14" rx="2" fill="#38bdf8" />
+                <!-- Sensor Motor & Tanque -->
+                <circle cx="60" cy="46" r="5" fill="#10b981" />
+                <text x="60" y="118" text-anchor="middle" fill="#bae6fd" font-size="12" font-weight="600">PBTC</text>
+                <text id="svgWeightText" x="60" y="134" text-anchor="middle" fill="#f8fafc" font-size="12" font-weight="700">28,4t</text>
+              </svg>
+
+              <dl class="grid flex-1 grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                <div>
+                  <dt class="text-slate-300">Custo Atual</dt>
+                  <dd id="twinCostKm" class="mono-num font-semibold text-emerald-300">R$ 4,88/km</dd>
+                </div>
+                <div>
+                  <dt class="text-slate-300">Consumo OBD</dt>
+                  <dd id="twinKmL" class="mono-num font-semibold text-slate-100">2,42 km/L</dd>
+                </div>
+                <div>
+                  <dt class="text-slate-300">Rotação / Motor</dt>
+                  <dd id="twinRpm" class="mono-num font-semibold text-slate-100">1.340 RPM</dd>
+                </div>
+                <div>
+                  <dt class="text-slate-300">Freios / Eixos</dt>
+                  <dd id="twinBrakes" class="mono-num font-semibold text-emerald-300">138 °C · OK</dd>
+                </div>
+                <div class="col-span-2 pt-1 border-t border-[#1e2d3d]">
+                  <dt class="text-slate-300">Ação IA Recomendada</dt>
+                  <dd id="twinAiNote" class="font-medium text-sky-300">Reduzir p/ 70 km/h na subida (+4% diesel)</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+
+          <!-- Painel Oportunidades de Retorno (RF04) -->
+          <div class="panel p-4">
+            <div class="flex items-center justify-between pb-2.5 border-b border-[#1e2d3d]">
+              <h2 class="text-sm font-semibold text-slate-100">Oportunidades de Retorno (Frete Morto)</h2>
+              <span id="backhaulTag" class="rounded bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-300">1 Match IA</span>
+            </div>
+            <div class="mt-3 space-y-3 text-xs">
+              <p id="backhaulDesc" class="text-slate-200 leading-relaxed">
+                <strong>Caminhão 04</strong> está voltando vazio na <strong>BR-050</strong> (Goiânia → SP). Carga compatível de <strong>18t (Alimentos)</strong> pronta em Uberlândia (+9 km de desvio), gerando <strong>+R$ 6.400 líquidos</strong>.
+              </p>
+              <button id="btnMatchBackhaul" type="button" onclick="allocateReturnFreight()" class="w-full rounded-lg bg-emerald-600 px-3 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 transition-colors">
+                Alocar Carga de Retorno no Caminhão 04
+              </button>
+            </div>
+          </div>
+
+          <!-- Revezamento & Baldeação Urbana (RF02 / RF05) -->
+          <div class="panel p-4">
+            <h2 class="text-sm font-semibold text-slate-100 pb-2.5 border-b border-[#1e2d3d]">Orquestração de Hubs & Baldeação</h2>
+            <ul class="mt-2.5 divide-y divide-[#1e2d3d] text-xs">
+              <li class="py-2 flex items-start justify-between gap-2">
+                <div>
+                  <p class="font-semibold text-slate-100">Hub Km 120 · Troca de Carreta</p>
+                  <p class="text-slate-300">CAM-01 troca semirreboque c/ CAM-08 · Lei do Descanso OK</p>
+                </div>
+                <span class="mono-num shrink-0 text-sky-300">38 min</span>
+              </li>
+              <li class="pt-2 flex items-start justify-between gap-2">
+                <div>
+                  <p class="font-semibold text-slate-100">Baldeação ZMRC SP · CAM-12</p>
+                  <p class="text-slate-300">Carreta 30t → 3 VUCs elétricos no Hub Guarulhos</p>
+                </div>
+                <span class="mono-num shrink-0 text-emerald-300">-22% R$/km</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== ABA 2: VISÃO DO MOTORISTA (MULTIMÍDIA CABINE) ==================== -->
+    <section id="viewDriver" aria-label="Tela Multimídia do Motorista" class="hidden">
+      <div class="mx-auto max-w-5xl space-y-4">
+        <!-- Barra Superior Simples do Multimídia (Heurísticas de Nielsen: Status claro + Botões grandes >=52px) -->
+        <div class="panel p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <span class="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-600 text-white">
+              <i data-lucide="truck" class="h-6 w-6"></i>
+            </span>
+            <div>
+              <h2 class="text-base font-bold text-slate-100">Olá, Seu Carlos · Caminhão 01</h2>
+              <p id="driverStatusLine" class="text-sm text-emerald-300 font-medium">Sinal via Satélite Ativo · Viagem tranquila e protegida</p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="btnModeGps" type="button" onclick="switchDriverScreen('gps')" class="min-h-[48px] inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-bold text-white">
+              <i data-lucide="compass" class="h-5 w-5"></i>
+              <span>Guia de Estrada</span>
+            </button>
+            <button id="btnModeCam" type="button" onclick="switchDriverScreen('cam')" class="min-h-[48px] inline-flex items-center gap-2 rounded-lg bg-[#182636] px-4 py-2.5 text-sm font-bold text-slate-100 hover:bg-[#22354a]">
+              <i data-lucide="video" class="h-5 w-5"></i>
+              <span>RotaCAM (4 Câmeras)</span>
+            </button>
+            <button type="button" onclick="speakDriverGuidance()" class="min-h-[48px] inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-500">
+              <i data-lucide="volume-2" class="h-5 w-5"></i>
+              <span>Ouvir Avisos</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- TELA A: GUIA DE ESTRADA (Inspirado no GPS Rodoviário - Imagem 4) -->
+        <div id="driverGpsScreen" class="grid grid-cols-1 gap-4 lg:grid-cols-12">
+          <!-- Visor de Pista e Placas Rodoviárias (7 colunas) -->
+          <div class="panel p-4 lg:col-span-7 flex flex-col justify-between space-y-3">
+            <!-- Placas Superiores Estilo Rodovia Brasileira -->
+            <div class="grid grid-cols-12 gap-2.5">
+              <!-- Distância da Manobra -->
+              <div class="col-span-3 rounded-lg bg-[#091017] border border-[#2a3f55] p-2.5 flex flex-col items-center justify-center text-center">
+                <i id="signTurnIcon" data-lucide="arrow-up-right" class="h-8 w-8 text-amber-400"></i>
+                <span id="signDistText" class="mono-num mt-1 text-xl font-bold text-white">5 km</span>
+              </div>
+              <!-- Placa Azul/Verde Principal com Faixas -->
+              <div id="mainRoadSign" class="road-sign-blue col-span-5 p-2.5 flex flex-col justify-between text-center">
+                <span id="signRoadCode" class="text-xs font-bold text-sky-100">BR-116 · Pres. Dutra</span>
+                <p id="signRoadName" class="text-sm sm:text-base font-bold text-white">Mantenha a Direita</p>
+                <div class="mt-1.5 flex items-center justify-center gap-4 text-white" aria-label="Indicador de faixas">
+                  <span class="opacity-40 text-lg font-bold">↑</span>
+                  <span class="text-emerald-300 text-xl font-bold">↑</span>
+                  <span class="text-emerald-300 text-xl font-bold">↑</span>
+                </div>
+              </div>
+              <!-- Próximo Destino / Hub -->
+              <div class="road-sign-green col-span-4 p-2.5 flex flex-col justify-between text-center">
+                <span class="text-xs font-bold text-emerald-100">Próxima Parada</span>
+                <p class="text-sm font-bold text-white">Hub Km 120</p>
+                <span class="text-xs font-semibold text-emerald-200">Posto Resende</span>
+              </div>
+            </div>
+
+            <!-- Visão 3D Limpa da Rodovia + Setas de Faixa + Resumo Lateral -->
+            <div class="relative rounded-lg overflow-hidden border border-[#263a4f] bg-[#0c1824]">
+              <svg viewBox="0 0 600 250" class="w-full h-auto" role="img" aria-label="Guia visual de faixas da rodovia">
+                <!-- Horizonte Noturno/Entardecer Confortável aos Olhos -->
+                <rect x="0" y="0" width="600" height="92" fill="#10253b" />
+                <!-- Relevo Suave -->
+                <path d="M0,92 Q150,68 310,88 T600,82 L600,95 L0,95 Z" fill="#14332b" />
+                <!-- Gramado Lateral -->
+                <rect x="0" y="92" width="600" height="158" fill="#122b24" />
+                <!-- Asfalto Principal (3 Faixas em Perspectiva) -->
+                <polygon points="225,92 375,92 520,250 80,250" fill="#1f2937" stroke="#94a3b8" stroke-width="2" />
+                <!-- Rampa de Saída Segura -->
+                <polygon id="detourRampSvg" points="355,92 390,92 585,195 510,210" fill="#1e3a2f" stroke="#6ee7b7" stroke-width="1.5" class="hidden" />
+                <!-- Divisórias de Faixa -->
+                <line x1="275" y1="92" x2="225" y2="250" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="10 8" />
+                <line x1="325" y1="92" x2="375" y2="250" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="10 8" />
+
+                <!-- Setas Verdes de Guia na Faixa Recomendada (Inspirado na Imagem 4) -->
+                <g id="laneArrowsDefault">
+                  <path d="M295,235 L302,165 L292,165 L306,142 L320,165 L310,165 L315,235 Z" fill="#10b981" fill-opacity="0.88" />
+                  <path d="M415,235 L388,165 L378,165 L388,142 L406,165 L396,165 L435,235 Z" fill="#10b981" fill-opacity="0.88" />
+                </g>
+
+                <!-- Placa de Velocidade Ideal na Beira da Pista -->
+                <g transform="translate(115, 138)">
+                  <circle cx="0" cy="0" r="24" fill="#ffffff" stroke="#ef4444" stroke-width="5" />
+                  <text x="0" y="6" text-anchor="middle" fill="#0f172a" font-size="18" font-weight="800">70</text>
+                  <text x="0" y="38" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">Ideal Subida</text>
+                </g>
+              </svg>
+
+              <!-- Faixa Inferior com Nome da Via e Dados Essenciais -->
+              <div class="grid grid-cols-3 divide-x divide-[#24374b] bg-[#0a121b] border-t border-[#24374b] text-center">
+                <div class="p-2.5">
+                  <p class="text-xs text-slate-300">Faltam p/ Parada</p>
+                  <p id="gpsDistHub" class="mono-num text-lg font-bold text-white">38 km</p>
+                </div>
+                <div class="p-2.5">
+                  <p class="text-xs text-slate-300">Tempo Restante</p>
+                  <p id="gpsTimeRem" class="mono-num text-lg font-bold text-emerald-300">0h 38m</p>
+                </div>
+                <div class="p-2.5">
+                  <p class="text-xs text-slate-300">Chegada no Hub</p>
+                  <p id="gpsEta" class="mono-num text-lg font-bold text-white">21:40</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Barra de Informações Básicas (Combustível e Descanso em linguagem simples) -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-sm text-slate-200">
+              <span><strong>Velocidade atual:</strong> <span id="driverSpeedVal" class="mono-num text-amber-300">78 km/h</span></span>
+              <span><strong>Tanque:</strong> Meio tanque (roda +410 km)</span>
+              <span><strong>Seu descanso:</strong> Em 38 min</span>
+            </div>
+          </div>
+
+          <!-- Cartões de Avisos Claros da IA (5 colunas - Sem jargão técnico) -->
+          <div class="space-y-3 lg:col-span-5">
+            <!-- Alerta 1: Economia na Subida -->
+            <div class="panel p-4">
+              <div class="flex items-start gap-3">
+                <span class="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300">
+                  <i data-lucide="gauge" class="h-5 w-5"></i>
+                </span>
+                <div class="flex-1">
+                  <h3 class="text-base font-bold text-amber-300">Dica para Economizar Diesel</h3>
+                  <p class="mt-1 text-sm sm:text-base text-slate-100 leading-snug">
+                    Reduza para <strong>70 km/h nos próximos 5 km</strong> para economizar <strong>4% de diesel</strong> na subida.
+                  </p>
+                  <button id="btnAckEco" type="button" onclick="ackDriverCard('btnAckEco', 'Velocidade ajustada · Economia ativa')" class="mt-3 min-h-[44px] w-full rounded-lg bg-[#192838] px-3 py-2 text-sm font-semibold text-slate-100 hover:bg-[#22364b] transition-colors">
+                    Entendido, vou manter 70 km/h
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Alerta 2: Segurança de Rota (Destaca no Recálculo IA) -->
+            <div id="driverSecurityCard" class="panel p-4">
+              <div class="flex items-start gap-3">
+                <span id="secIconBox" class="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-500/20 text-red-300">
+                  <i data-lucide="shield-alert" class="h-5 w-5"></i>
+                </span>
+                <div class="flex-1">
+                  <h3 class="text-base font-bold text-red-300">Aviso de Segurança na Estrada</h3>
+                  <p id="driverSecurityText" class="mt-1 text-sm sm:text-base text-slate-100 leading-snug">
+                    Rota alterada automaticamente: <strong>evitando a BR-X devido ao horário de risco (22h)</strong>.
+                  </p>
+                  <p class="mt-1 text-xs text-slate-300">Caminho novo tem iluminação, posto policial e asfalto seco (+12 min).</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Alerta 3: Hub de Revezamento -->
+            <div class="panel p-4">
+              <div class="flex items-start gap-3">
+                <span class="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/20 text-sky-300">
+                  <i data-lucide="map-pin" class="h-5 w-5"></i>
+                </span>
+                <div class="flex-1">
+                  <h3 class="text-base font-bold text-sky-300">Próxima Parada de Revezamento</h3>
+                  <p class="mt-1 text-sm sm:text-base text-slate-100 leading-snug">
+                    <strong>Parada no Hub Km 120</strong> para troca de carreta com o <strong>Caminhão B (CAM-08)</strong>.
+                  </p>
+                  <p class="mt-1 text-xs text-slate-300">Vaga 04 reservada · Jantar e local de descanso liberados.</p>
+                  <button id="btnConfirmHub" type="button" onclick="ackDriverCard('btnConfirmHub', 'Parada confirmada com a Torre')" class="mt-3 min-h-[44px] w-full rounded-lg bg-sky-600 px-3 py-2 text-sm font-bold text-white hover:bg-sky-500 transition-colors">
+                    Confirmar Parada no Hub Km 120
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TELA B: ROTACAM MONITOR DE CABINE 4 CÂMERAS (Inspirado na Imagem 3) -->
+        <div id="driverCamScreen" class="hidden panel p-4 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[#1e2d3d] pb-3">
+            <div class="flex items-center gap-3">
+              <span class="rounded bg-red-600 px-2 py-0.5 text-xs font-bold text-white">REC</span>
+              <h3 class="text-base font-bold text-slate-100">RotaCAM · Visão Auxiliar de Cabine (Sem Pontos Cegos)</h3>
+            </div>
+            <span class="text-sm font-semibold text-emerald-300">Laterais e traseira livres para manobra</span>
+          </div>
+
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <!-- Câmera 01 -->
+            <div class="rounded-lg border border-[#2a3f55] bg-[#0a131c] p-3">
+              <div class="flex justify-between text-xs font-semibold text-slate-200 mb-2">
+                <span>Câmera 01 · Frente da Pista</span>
+                <span class="text-emerald-300">Distância Segura (65 m)</span>
+              </div>
+              <svg viewBox="0 0 320 140" class="w-full rounded bg-[#102030]">
+                <rect width="320" height="58" fill="#16324f" />
+                <polygon points="118,58 202,58 295,140 25,140" fill="#26323f" />
+                <line x1="160" y1="58" x2="160" y2="140" stroke="#fde047" stroke-dasharray="8 6" stroke-width="2" />
+                <rect x="144" y="66" width="32" height="26" rx="3" fill="#e2e8f0" stroke="#38bdf8" stroke-width="1.5" />
+              </svg>
+            </div>
+            <!-- Câmera 02 -->
+            <div class="rounded-lg border border-[#2a3f55] bg-[#0a131c] p-3">
+              <div class="flex justify-between text-xs font-semibold text-slate-200 mb-2">
+                <span>Câmera 02 · Ponto Cego Direito</span>
+                <span class="text-emerald-300">Livre</span>
+              </div>
+              <svg viewBox="0 0 320 140" class="w-full rounded bg-[#102030]">
+                <rect width="320" height="55" fill="#16324f" />
+                <polygon points="40,55 210,55 240,140 0,140" fill="#26323f" />
+                <rect x="225" y="15" width="95" height="125" fill="#334155" />
+                <text x="272" y="82" text-anchor="middle" fill="#cbd5e1" font-size="12">Carreta Dir.</text>
+              </svg>
+            </div>
+            <!-- Câmera 03 -->
+            <div class="rounded-lg border border-[#2a3f55] bg-[#0a131c] p-3">
+              <div class="flex justify-between text-xs font-semibold text-slate-200 mb-2">
+                <span>Câmera 03 · Ponto Cego Esquerdo</span>
+                <span class="text-amber-300">Veículo a 40 m atrás</span>
+              </div>
+              <svg viewBox="0 0 320 140" class="w-full rounded bg-[#102030]">
+                <rect width="320" height="55" fill="#16324f" />
+                <polygon points="110,55 280,55 320,140 80,140" fill="#26323f" />
+                <rect x="0" y="15" width="95" height="125" fill="#334155" />
+                <text x="48" y="82" text-anchor="middle" fill="#cbd5e1" font-size="12">Carreta Esq.</text>
+              </svg>
+            </div>
+            <!-- Câmera 04 -->
+            <div class="rounded-lg border border-[#2a3f55] bg-[#0a131c] p-3">
+              <div class="flex justify-between text-xs font-semibold text-slate-200 mb-2">
+                <span>Câmera 04 · Traseira / Lacre do Baú</span>
+                <span class="text-emerald-300">Porta Trancada via Satélite</span>
+              </div>
+              <svg viewBox="0 0 320 140" class="w-full rounded bg-[#102030]">
+                <rect width="320" height="52" fill="#16324f" />
+                <polygon points="95,52 225,52 300,140 20,140" fill="#26323f" />
+                <line x1="75" y1="125" x2="245" y2="125" stroke="#10b981" stroke-width="2" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast de Feedback Rápido -->
+  <div id="sysToast" role="status" aria-live="polite" class="fixed bottom-5 right-5 hidden max-w-md rounded-lg border border-sky-400/50 bg-[#0f1c29] px-4 py-3 text-sm font-medium text-slate-100"></div>
+
+  <script>
+    // Regras de Negócio Matemáticas (SRS Seção 2.3)
+    function calcRouteCost({ km, dieselPrice, baseKmL, loadTons, maxTons, toll, driverCost, backhaulRevenue }) {
+      const loadFactor = 1 + 0.28 * (loadTons / maxTons);
+      const fuelPerKm = (dieselPrice / baseKmL) * loadFactor;
+      const total = km * (fuelPerKm + 0.92) + toll + driverCost - backhaulRevenue;
+      return { total, perKm: total / km };
+    }
+
+    function calcRiskScore({ crimeIdx, weatherIdx, cargoValIdx, fatigueIdx, shadowIdx }) {
+      return Math.min(100, Math.round(100 * (
+        0.35 * crimeIdx + 0.25 * weatherIdx + 0.20 * cargoValIdx + 0.10 * fatigueIdx + 0.10 * shadowIdx
+      )));
+    }
+
+    // Auto-verificação das fórmulas (self-check)
+    const sampleCost = calcRouteCost({ km: 430, dieselPrice: 6.1, baseKmL: 2.6, loadTons: 28, maxTons: 30, toll: 380, driverCost: 420, backhaulRevenue: 0 });
+    console.assert(sampleCost.perKm > 4 && sampleCost.perKm < 7, 'Custo/km fora da faixa esperada');
+    console.assert(calcRiskScore({ crimeIdx: 0.9, weatherIdx: 0.85, cargoValIdx: 0.9, fatigueIdx: 0.2, shadowIdx: 0.3 }) >= 70, 'Score crítico deve acionar bloqueio');
+
+    // Estado da Frota no Brasil
+    const fleet = [
+      { id: 'CAM-01', name: 'CAM-01 (Carreta 6 Eixos)', route: 'São Paulo → Rio de Janeiro · Mot. Carlos Silva', status: 'optimal', weight: '28,4t', costKm: 'R$ 4,88/km', kmL: '2,42 km/L', rpm: '1.340 RPM', brakes: '138 °C · OK', health: 'Saúde 98%', aiNote: 'Reduzir p/ 70 km/h na subida (+4% diesel)', pts: [[475, 388], [505, 368], [528, 362]], t: 0.18, speed: 0.0009 },
+      { id: 'CAM-04', name: 'CAM-04 (Graneleiro · Vazio)', route: 'Goiânia → São Paulo (BR-050) · Mot. Marcos Lima', status: 'empty', weight: '0,0t', costKm: 'R$ 5,64/km', kmL: '3,15 km/L', rpm: '1.290 RPM', brakes: '112 °C · OK', health: 'Vazio · Match IA', aiNote: 'Coletar 18t em Uberlândia (+R$ 6.400)', pts: [[432, 292], [452, 335], [475, 388]], t: 0.32, speed: 0.0011 },
+      { id: 'CAM-08', name: 'CAM-08 (Revezamento Hub)', route: 'Rio → Hub Km 120 Resende · Mot. João Pedro', status: 'hub', weight: '26,0t', costKm: 'R$ 4,76/km', kmL: '2,48 km/L', rpm: '1.310 RPM', brakes: '131 °C · OK', health: 'No Hub em 38m', aiNote: 'Troca de carreta agendada c/ CAM-01', pts: [[528, 362], [505, 368]], t: 0.55, speed: 0.0007 },
+      { id: 'CAM-12', name: 'CAM-12 (Baldeação VUC)', route: 'Curitiba → Hub Guarulhos SP · Mot. André Souza', status: 'hub', weight: '29,8t', costKm: 'R$ 4,91/km', kmL: '2,36 km/L', rpm: '1.390 RPM', brakes: '149 °C · OK', health: 'Baldeação ZMRC', aiNote: 'Transferir carga p/ 3 VUCs na entrada de SP', pts: [[442, 428], [475, 388]], t: 0.62, speed: 0.0009 },
+      { id: 'CAM-19', name: 'CAM-19 (Bitrem Starlink)', route: 'Cuiabá → Goiânia (BR-364) · Mot. Roberto Alves', status: 'optimal', weight: '36,5t', costKm: 'R$ 4,79/km', kmL: '2,28 km/L', rpm: '1.350 RPM', brakes: '141 °C · OK', health: 'Starlink LEO Ativo', aiNote: 'Velocidade cruzeiro ideal · Zero sombra de sinal', pts: [[338, 272], [432, 292]], t: 0.44, speed: 0.0008 },
+      { id: 'CAM-23', name: 'CAM-23 (Baú Refrigerado)', route: 'Salvador → Recife (BR-101) · Mot. Paulo Nunes', status: 'optimal', weight: '22,1t', costKm: 'R$ 4,61/km', kmL: '2,59 km/L', rpm: '1.280 RPM', brakes: '126 °C · OK', health: 'Saúde 99%', aiNote: 'Frio do baú estável (-18 °C) · Rota limpa', pts: [[575, 292], [628, 212]], t: 0.28, speed: 0.001 }
+    ];
+
+    let selectedTruckId = 'CAM-01';
+    let simMultiplier = 1;
+    let riskActive = false;
+    let backhaulAllocated = false;
+
+    const statusColors = { optimal: '#10b981', empty: '#f59e0b', hub: '#38bdf8', danger: '#ef4444' };
+
+    function interpPolyline(pts, t) {
+      const segs = pts.length - 1;
+      const scaled = Math.min(0.999, Math.max(0, t)) * segs;
+      const idx = Math.floor(scaled);
+      const frac = scaled - idx;
+      const [x1, y1] = pts[idx];
+      const [x2, y2] = pts[idx + 1];
+      const angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI);
+      return { x: x1 + (x2 - x1) * frac, y: y1 + (y2 - y1) * frac, angle };
+    }
+
+    function renderTrucks() {
+      const layer = document.getElementById('trucksLayer');
+      layer.innerHTML = fleet.map((tr) => {
+        const pos = interpPolyline(tr.pts, tr.t);
+        const color = statusColors[tr.status] || '#10b981';
+        const isSel = tr.id === selectedTruckId;
+        const ring = isSel ? `<circle cx="0" cy="0" r="13" fill="none" stroke="#f8fafc" stroke-width="1.8" />` : '';
+        return `
+          <g transform="translate(${pos.x.toFixed(1)}, ${pos.y.toFixed(1)})" style="cursor:pointer" onclick="selectTruck('${tr.id}')">
+            ${ring}
+            <g transform="rotate(${pos.angle.toFixed(1)})">
+              <polygon points="9,0 -6,-6 -3,0 -6,6" fill="${color}" stroke="#091017" stroke-width="1.2" />
+            </g>
+            <text x="11" y="-8" fill="#f1f5f9" font-size="12" font-weight="700">${tr.id}</text>
+          </g>`;
+      }).join('');
+    }
+
+    function animateFleet() {
+      if (simMultiplier > 0) {
+        fleet.forEach((tr) => {
+          tr.t = (tr.t + tr.speed * simMultiplier) % 1;
+        });
+        renderTrucks();
+      }
+      requestAnimationFrame(animateFleet);
+    }
+
+    function selectTruck(id) {
+      selectedTruckId = id;
+      const tr = fleet.find((item) => item.id === id);
+      if (!tr) return;
+      document.getElementById('twinTitle').textContent = `Gêmeo Digital · ${tr.name}`;
+      document.getElementById('twinRoute').textContent = tr.route;
+      document.getElementById('twinBadge').textContent = tr.health;
+      document.getElementById('svgWeightText').textContent = tr.weight;
+      document.getElementById('twinCostKm').textContent = tr.costKm;
+      document.getElementById('twinKmL').textContent = tr.kmL;
+      document.getElementById('twinRpm').textContent = tr.rpm;
+      document.getElementById('twinBrakes').textContent = tr.brakes;
+      document.getElementById('twinAiNote').textContent = tr.aiNote;
+      renderTrucks();
+    }
+
+    function switchMainView(view) {
+      const isTower = view === 'tower';
+      document.getElementById('viewTower').classList.toggle('hidden', !isTower);
+      document.getElementById('viewDriver').classList.toggle('hidden', isTower);
+      document.getElementById('tabTowerBtn').className = isTower
+        ? 'flex items-center gap-2 rounded-md bg-sky-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors'
+        : 'flex items-center gap-2 rounded-md px-3.5 py-2 text-sm font-semibold text-slate-200 hover:bg-[#162332] transition-colors';
+      document.getElementById('tabDriverBtn').className = !isTower
+        ? 'flex items-center gap-2 rounded-md bg-sky-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors'
+        : 'flex items-center gap-2 rounded-md px-3.5 py-2 text-sm font-semibold text-slate-200 hover:bg-[#162332] transition-colors';
+      if (!isTower) document.getElementById('driverAlertBadge').classList.add('hidden');
+    }
+
+    function switchDriverScreen(mode) {
+      const isGps = mode === 'gps';
+      document.getElementById('driverGpsScreen').classList.toggle('hidden', !isGps);
+      document.getElementById('driverCamScreen').classList.toggle('hidden', isGps);
+      document.getElementById('btnModeGps').className = isGps
+        ? 'min-h-[48px] inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-bold text-white'
+        : 'min-h-[48px] inline-flex items-center gap-2 rounded-lg bg-[#182636] px-4 py-2.5 text-sm font-bold text-slate-100 hover:bg-[#22354a]';
+      document.getElementById('btnModeCam').className = !isGps
+        ? 'min-h-[48px] inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-bold text-white'
+        : 'min-h-[48px] inline-flex items-center gap-2 rounded-lg bg-[#182636] px-4 py-2.5 text-sm font-bold text-slate-100 hover:bg-[#22354a]';
+    }
+
+    function toggleMapLayer(layer) {
+      if (layer === 'hubs') {
+        const el = document.getElementById('layerHubs');
+        el.classList.toggle('hidden');
+      } else if (layer === 'risk') {
+        const el = document.getElementById('layerRiskZone');
+        el.classList.toggle('hidden');
+      }
+    }
+
+    function toggleSimulationSpeed() {
+      simMultiplier = simMultiplier === 1 ? 2.5 : simMultiplier === 2.5 ? 0 : 1;
+      const label = simMultiplier === 0 ? 'Mapa Pausado' : `Velocidade Mapa: ${simMultiplier}x`;
+      document.getElementById('simSpeedText').textContent = label;
+    }
+
+    function allocateReturnFreight() {
+      if (backhaulAllocated) return;
+      backhaulAllocated = true;
+      const cam04 = fleet.find((t) => t.id === 'CAM-04');
+      cam04.status = 'optimal';
+      cam04.name = 'CAM-04 (Carregado · Retorno IA)';
+      cam04.weight = '18,0t';
+      cam04.costKm = 'R$ 3,92/km';
+      cam04.health = 'Frete Retorno Ativo';
+      cam04.aiNote = 'Carga de 18t alocada em Uberlândia (+R$ 6.400 líquidos)';
+      document.getElementById('kpiCostKm').textContent = 'R$ 4,56/km';
+      document.getElementById('kpiSavings').textContent = 'R$ 424.800';
+      document.getElementById('kpiBackhaul').textContent = '96,8%';
+      document.getElementById('kpiBackhaulSub').textContent = 'Zero carretas vazias no corredor';
+      document.getElementById('backhaulTag').textContent = 'Alocado';
+      document.getElementById('backhaulTag').className = 'rounded bg-emerald-500/20 px-2 py-0.5 text-xs font-semibold text-emerald-300';
+      const btn = document.getElementById('btnMatchBackhaul');
+      btn.textContent = 'Carga Alocada no CAM-04 (Enviado ao Motorista)';
+      btn.disabled = true;
+      btn.className = 'w-full rounded-lg bg-slate-700 px-3 py-2.5 text-xs font-bold text-slate-300 cursor-not-allowed';
+      selectTruck('CAM-04');
+      showToast('Match concluído em 134 ms: CAM-04 alocado com 18t em Uberlândia (+R$ 6.400).');
+    }
+
+    function simulateRiskEvent() {
+      riskActive = !riskActive;
+      const cam01 = fleet.find((t) => t.id === 'CAM-01');
+      if (riskActive) {
+        const score = calcRiskScore({ crimeIdx: 0.92, weatherIdx: 0.88, cargoValIdx: 0.85, fatigueIdx: 0.15, shadowIdx: 0.25 });
+        document.getElementById('latencyReadout').textContent = '168 ms';
+        document.getElementById('layerRiskZone').classList.remove('hidden');
+        document.getElementById('br116DangerSeg').setAttribute('stroke', '#ef4444');
+        document.getElementById('safeDetourPath').classList.remove('hidden');
+        document.getElementById('detourRampSvg').classList.remove('hidden');
+        cam01.pts = [[475, 388], [496, 354], [528, 362]];
+        cam01.aiNote = 'Desvio automático ativo: evitando BR-X (22h + tempestade)';
+        document.getElementById('kpiRisk').textContent = `${score} → 19 / 100`;
+        document.getElementById('kpiRiskSub').textContent = '1 trecho bloqueado (BR-X) · Desvio IA ativo';
+        document.getElementById('simRiskLabel').textContent = 'Restaurar Rota Original';
+        document.getElementById('signDistText').textContent = '350 m';
+        document.getElementById('signRoadCode').textContent = 'Desvio Seguro IA · SP-070';
+        document.getElementById('signRoadName').textContent = 'Pegue a Saída Segura';
+        document.getElementById('gpsTimeRem').textContent = '0h 50m';
+        document.getElementById('gpsEta').textContent = '21:52';
+        document.getElementById('driverStatusLine').textContent = 'Rota recalculada p/ sua segurança · Caminho iluminado';
+        document.getElementById('driverAlertBadge').classList.remove('hidden');
+        selectTruck('CAM-01');
+        showToast(`Risco ${score}/100 detectado na BR-X (22h). Rota do CAM-01 recalculada em 168 ms.`);
+      } else {
+        document.getElementById('layerRiskZone').classList.add('hidden');
+        document.getElementById('br116DangerSeg').setAttribute('stroke', '#294156');
+        document.getElementById('safeDetourPath').classList.add('hidden');
+        document.getElementById('detourRampSvg').classList.add('hidden');
+        cam01.pts = [[475, 388], [505, 368], [528, 362]];
+        cam01.aiNote = 'Reduzir p/ 70 km/h na subida (+4% diesel)';
+        document.getElementById('kpiRisk').textContent = '18 / 100';
+        document.getElementById('kpiRiskSub').textContent = '0 trechos bloqueados no momento';
+        document.getElementById('simRiskLabel').textContent = 'Simular Alerta de Risco / Recálculo IA';
+        document.getElementById('signDistText').textContent = '5 km';
+        document.getElementById('signRoadCode').textContent = 'BR-116 · Pres. Dutra';
+        document.getElementById('signRoadName').textContent = 'Mantenha a Direita';
+        document.getElementById('gpsTimeRem').textContent = '0h 38m';
+        document.getElementById('gpsEta').textContent = '21:40';
+        document.getElementById('driverStatusLine').textContent = 'Sinal via Satélite Ativo · Viagem tranquila e protegida';
+        selectTruck('CAM-01');
+        showToast('Trecho normalizado. Rota principal restaurada.');
+      }
+    }
+
+    function ackDriverCard(btnId, text) {
+      const btn = document.getElementById(btnId);
+      btn.textContent = text;
+      btn.className = 'mt-3 min-h-[44px] w-full rounded-lg bg-emerald-700/40 px-3 py-2 text-sm font-semibold text-emerald-200';
+      if (btnId === 'btnAckEco') document.getElementById('driverSpeedVal').textContent = '70 km/h (Ideal)';
+    }
+
+    function speakDriverGuidance() {
+      const msg = 'Atenção motorista Carlos. Reduza para setenta por hora nos próximos cinco quilômetros para economizar quatro por cento de diesel na subida. Rota alterada evitando a B R X pelo horário de risco. Próxima parada no Hub quilômetro cento e vinte.';
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(msg);
+        utter.lang = 'pt-BR';
+        utter.rate = 1.02;
+        window.speechSynthesis.speak(utter);
+      }
+      showToast('Áudio da cabine: reproduzindo orientações claras em voz alta.');
+    }
+
+    let toastTimer;
+    function showToast(message) {
+      const el = document.getElementById('sysToast');
+      el.textContent = message;
+      el.classList.remove('hidden');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.add('hidden'), 4200);
+    }
+
+    const fallbackSvg = {
+      radar: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="12" x2="18.5" y2="5.5"/>',
+      globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+      navigation: '<polygon points="3 11 21 3 13 21 11 13 3 11"/>',
+      'shield-alert': '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.8"/>',
+      'shield-check': '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>',
+      fuel: '<rect x="4" y="4" width="10" height="16" rx="1"/><path d="M14 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V9l-3-3"/>',
+      'trending-down': '<polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/>',
+      repeat: '<polyline points="17 2 21 6 17 10"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 22 3 18 7 14"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
+      'git-fork': '<circle cx="12" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9v2a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9M12 13v2"/>',
+      'cloud-lightning': '<path d="M19 16.9A5 5 0 0 0 18 7h-1.3a8 8 0 1 0-11.6 9"/><polyline points="13 11 9 17 15 17 11 23"/>',
+      'package-plus': '<path d="M21 10V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l2-1.1"/><path d="M16 19h6M19 16v6"/>',
+      'fast-forward': '<polygon points="13 19 22 12 13 5 13 19"/><polygon points="2 19 11 12 2 5 2 19"/>',
+      truck: '<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
+      compass: '<circle cx="12" cy="12" r="10"/><polygon points="16.2 7.8 14.1 14.1 7.8 16.2 9.9 9.9 16.2 7.8"/>',
+      video: '<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>',
+      'volume-2': '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/>',
+      'arrow-up-right': '<line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/>',
+      gauge: '<path d="m12 14 4-4"/><path d="M3.3 19a10 10 0 1 1 17.4 0"/>',
+      'map-pin': '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>'
+    };
+
+    if (window.lucide) {
+      window.lucide.createIcons();
+    } else {
+      document.querySelectorAll('[data-lucide]').forEach((el) => {
+        const key = el.getAttribute('data-lucide');
+        const cls = el.getAttribute('class') || 'h-4 w-4';
+        el.outerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${cls}">${fallbackSvg[key] || '<circle cx="12" cy="12" r="8"/>'}</svg>`;
+      });
+    }
+    renderTrucks();
+    requestAnimationFrame(animateFleet);
+  </script>
+</body>
+</html>
