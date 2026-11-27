@@ -2,7 +2,7 @@
 
 Documentação executiva e de engenharia do sistema **Rota Perfeita** (Torre de Controle Logística com IA Preditiva, Gêmeo Digital, Telemetria Satelital LEO e Multimídia de Cabine).
 
-- **Protótipo Único Interativo:** [`index.html`](./index.html)
+- **Aplicação Web Pronta (HTML + CSS + JS Externos):** [`index.html`](./index.html) · [`style.css`](./style.css) · [`script.js`](./script.js)
 
 ---
 
