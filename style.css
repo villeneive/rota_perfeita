@@ -1,12 +1,12 @@
 :root {
-  --bg-app: #0a1118;
-  --bg-header: #0e1722;
+  --bg-app: #091017;
+  --bg-header: #0d1620;
   --bg-panel: #111c28;
   --bg-inset: #081018;
   --bg-control: #172636;
-  --bg-control-hover: #21354b;
+  --bg-control-hover: #21364d;
   --border-subtle: #1f3144;
-  --border-strong: #2d4661;
+  --border-strong: #2e4763;
   --text-primary: #f1f5f9;
   --text-secondary: #cbd5e1;
   --text-muted: #94a3b8;
@@ -19,15 +19,11 @@
   --accent-emerald-soft: rgba(16, 185, 129, 0.18);
   --text-emerald: #6ee7b7;
   --accent-amber: #f59e0b;
-  --accent-amber-hover: #d97706;
   --accent-amber-soft: rgba(245, 158, 11, 0.18);
   --text-amber: #fcd34d;
-  --accent-danger: #dc2626;
-  --accent-danger-soft: rgba(239, 68, 68, 0.18);
+  --accent-danger: #b91c1c;
+  --accent-danger-soft: rgba(239, 68, 68, 0.2);
   --text-danger: #fca5a5;
-  --map-land: #132130;
-  --map-neighbor: #0d1620;
-  --map-road: #2b445c;
   --sign-blue-bg: #144596;
   --sign-blue-border: #93c5fd;
   --sign-green-bg: #0e5a38;
@@ -54,11 +50,8 @@ body.theme-day {
   --accent-emerald-hover: #065f46;
   --accent-emerald-soft: rgba(5, 150, 105, 0.14);
   --text-emerald: #065f46;
-  --accent-amber: #d97706;
-  --accent-amber-hover: #b45309;
   --accent-amber-soft: rgba(217, 119, 6, 0.15);
   --text-amber: #92400e;
-  --accent-danger: #b91c1c;
   --accent-danger-soft: rgba(220, 38, 38, 0.14);
   --text-danger: #991b1b;
 }
@@ -82,11 +75,10 @@ body {
   background-color: var(--bg-app);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
-  transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 ::selection {
-  background-color: #0284c7;
+  background-color: #0369a1;
   color: #ffffff;
 }
 
@@ -143,18 +135,18 @@ h3 {
   display: none !important;
 }
 
-/* Header & Navigation */
+/* Header */
 .top-header {
   background-color: var(--bg-header);
   border-bottom: 1px solid var(--border-subtle);
   padding: 12px 20px;
   position: sticky;
   top: 0;
-  z-index: 30;
+  z-index: 1000;
 }
 
 .header-inner {
-  max-width: 1320px;
+  max-width: 1380px;
   margin: 0 auto;
   display: flex;
   flex-wrap: wrap;
@@ -188,6 +180,7 @@ h3 {
 
 .tab-switcher {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   background-color: var(--bg-inset);
@@ -203,9 +196,10 @@ h3 {
   gap: 8px;
 }
 
-/* Buttons & Controls */
+/* Controls */
 button,
-select {
+select,
+input {
   font-family: inherit;
   font-size: 13px;
 }
@@ -220,7 +214,7 @@ select {
   padding: 9px 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 160ms cubic-bezier(0.22, 1, 0.36, 1), color 160ms cubic-bezier(0.22, 1, 0.36, 1), border-color 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: background-color 160ms cubic-bezier(0.22, 1, 0.36, 1), color 160ms cubic-bezier(0.22, 1, 0.36, 1);
   color: var(--text-primary);
   background-color: var(--bg-control);
 }
@@ -230,7 +224,8 @@ select {
 }
 
 .btn:focus-visible,
-select:focus-visible {
+select:focus-visible,
+input:focus-visible {
   outline: 2px solid #38bdf8;
   outline-offset: 2px;
 }
@@ -243,7 +238,7 @@ select:focus-visible {
 .btn-tab {
   background-color: transparent;
   color: var(--text-secondary);
-  padding: 8px 14px;
+  padding: 8px 13px;
 }
 
 .btn-tab.active {
@@ -279,11 +274,9 @@ select:focus-visible {
   background-color: #fbbf24;
 }
 
-.btn-cabin {
-  min-height: 48px;
-  padding: 10px 16px;
-  font-size: 14px;
-  font-weight: 700;
+.btn-danger {
+  background-color: var(--accent-danger);
+  color: #ffffff;
 }
 
 .btn-full {
@@ -299,15 +292,15 @@ select:focus-visible {
   padding: 1px 6px;
 }
 
-/* Main Layout */
+/* Main Container */
 .app-main {
-  max-width: 1320px;
+  max-width: 1380px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 18px 20px;
 }
 
 .stack-lg > * + * {
-  margin-top: 20px;
+  margin-top: 18px;
 }
 
 .stack-md > * + * {
@@ -321,7 +314,17 @@ select:focus-visible {
   padding: 16px;
 }
 
-/* KPI Strip */
+.section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* KPIs */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -340,8 +343,7 @@ select:focus-visible {
 .kpi-value {
   font-size: 24px;
   font-weight: 700;
-  margin-top: 8px;
-  color: var(--text-primary);
+  margin-top: 6px;
 }
 
 .kpi-sub {
@@ -355,17 +357,16 @@ select:focus-visible {
 .text-amber { color: var(--text-amber); }
 .text-danger { color: var(--text-danger); }
 
-/* Tower Grid */
+/* Tower Layout & Real Map */
 .tower-grid {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+  grid-template-columns: minmax(0, 2.15fr) minmax(330px, 1fr);
   gap: 18px;
   align-items: start;
 }
 
 .map-panel {
-  background-color: #091017;
-  color: #f1f5f9;
+  background-color: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 16px;
@@ -374,18 +375,92 @@ select:focus-visible {
   gap: 12px;
 }
 
-.section-header {
+.route-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.input-field,
+.select-field {
+  background-color: var(--bg-inset);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 500;
+}
+
+.route-bar .select-field {
+  flex: 1;
+  min-width: 170px;
+}
+
+.real-map-frame {
+  position: relative;
+  width: 100%;
+  height: 510px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  background-color: #071019;
+}
+
+.map-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.map-style-bar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 500;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background-color: rgba(11, 20, 30, 0.9);
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid #2b445e;
+}
+
+.btn-map-chip {
+  background-color: #152536;
+  color: #f1f5f9;
+  border: 1px solid #29435c;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-map-chip:hover {
+  background-color: #1f354d;
+}
+
+.btn-map-chip.active {
+  background-color: #0369a1;
+  border-color: #7dd3fc;
+  color: #ffffff;
+}
+
+.map-dock {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-subtle);
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
 }
 
-.map-panel .section-header {
-  border-bottom-color: #1e2d3d;
+.dock-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .legend-list {
@@ -394,7 +469,7 @@ select:focus-visible {
   align-items: center;
   gap: 12px;
   font-size: 12px;
-  color: #e2e8f0;
+  color: var(--text-secondary);
 }
 
 .legend-item {
@@ -415,117 +490,33 @@ select:focus-visible {
 .dot-sky { background-color: #38bdf8; }
 .dot-danger { background-color: #ef4444; }
 
-.map-viewport {
-  position: relative;
-  width: 100%;
-  overflow-x: auto;
-  background-color: #070d14;
-  border-radius: 10px;
-  padding: 8px;
-}
-
-.map-svg {
-  width: 100%;
-  min-width: 560px;
-  height: auto;
-  display: block;
-}
-
-.map-zoom-controls {
-  position: absolute;
-  top: 14px;
-  right: 14px;
+/* Custom Truck Marker on Real Map */
+.rp-truck-marker {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.btn-map-tool {
-  background-color: #142231;
-  color: #f1f5f9;
-  border: 1px solid #283e56;
-  padding: 6px 10px;
+  align-items: center;
+  gap: 4px;
+  background-color: rgba(9, 16, 24, 0.92);
+  color: #f8fafc;
+  border: 1.5px solid #38bdf8;
+  border-radius: 999px;
+  padding: 3px 8px;
   font-size: 12px;
-  border-radius: 6px;
-  cursor: pointer;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-.btn-map-tool:hover {
-  background-color: #1e3247;
-}
-
-.btn-map-tool.active {
+.rp-hub-marker {
   background-color: #0369a1;
-  border-color: #38bdf8;
   color: #ffffff;
-}
-
-.map-dock {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding-top: 10px;
-  border-top: 1px solid #1e2d3d;
-}
-
-.dock-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-/* Digital Twin & Side Panels */
-.select-truck {
-  background-color: var(--bg-inset);
-  color: var(--text-primary);
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-weight: 600;
-}
-
-.twin-schematic-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-top: 12px;
-  padding: 12px;
-  border-radius: 10px;
-  background-color: #081018;
-  color: #f1f5f9;
-}
-
-.twin-svg {
-  width: 82px;
-  height: 138px;
-  flex-shrink: 0;
-}
-
-.twin-metrics {
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
+  border: 1.5px solid #bae6fd;
+  border-radius: 6px;
+  padding: 3px 7px;
   font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-.twin-metrics dt {
-  color: #cbd5e1;
-}
-
-.twin-metrics dd {
-  font-weight: 600;
-  margin-top: 1px;
-}
-
-.twin-ai-row {
-  grid-column: 1 / -1;
-  padding-top: 8px;
-  border-top: 1px solid #1e2d3d;
-}
-
+/* Status Pills & Divider Lists */
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -535,20 +526,10 @@ select:focus-visible {
   font-weight: 600;
 }
 
-.pill-emerald {
-  background-color: var(--accent-emerald-soft);
-  color: var(--text-emerald);
-}
-
-.pill-amber {
-  background-color: var(--accent-amber-soft);
-  color: var(--text-amber);
-}
-
-.pill-danger {
-  background-color: var(--accent-danger-soft);
-  color: var(--text-danger);
-}
+.pill-emerald { background-color: var(--accent-emerald-soft); color: var(--text-emerald); }
+.pill-amber { background-color: var(--accent-amber-soft); color: var(--text-amber); }
+.pill-sky { background-color: var(--accent-sky-soft); color: var(--text-sky); }
+.pill-danger { background-color: var(--accent-danger-soft); color: var(--text-danger); }
 
 .divider-list {
   list-style: none;
@@ -571,164 +552,320 @@ select:focus-visible {
   padding-bottom: 0;
 }
 
-/* Driver Multimedia View */
-.driver-container {
-  max-width: 1120px;
-  margin: 0 auto;
-}
-
-.driver-topbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.driver-grid {
+.metrics-2col {
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  gap: 16px;
-  align-items: start;
-}
-
-.signs-grid {
-  display: grid;
-  grid-template-columns: 3fr 5fr 4fr;
-  gap: 10px;
-}
-
-.sign-maneuver {
-  background-color: #091017;
-  color: #ffffff;
-  border: 2px solid #334e68;
-  border-radius: 10px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.road-sign-blue {
-  background-color: var(--sign-blue-bg);
-  color: #ffffff;
-  border: 2px solid var(--sign-blue-border);
-  border-radius: 10px;
-  padding: 12px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.road-sign-green {
-  background-color: var(--sign-green-bg);
-  color: #ffffff;
-  border: 2px solid var(--sign-green-border);
-  border-radius: 10px;
-  padding: 12px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.lane-arrows {
-  display: flex;
-  justify-content: center;
-  gap: 16px;
-  margin-top: 6px;
-  font-size: 20px;
-  font-weight: 800;
-}
-
-.highway-hud {
-  border-radius: 10px;
-  border: 1px solid #263b52;
-  background-color: #0c1824;
-  color: #f8fafc;
-  padding: 10px;
-}
-
-.hud-Readouts {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  background-color: #09111a;
-  border-radius: 8px;
-  margin-top: 8px;
-  text-align: center;
-}
-
-.hud-cell {
-  padding: 12px 10px;
-  border-right: 1px solid #24374b;
-}
-
-.hud-cell:last-child {
-  border-right: none;
-}
-
-.hud-label {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+  margin-top: 12px;
   font-size: 12px;
-  color: #cbd5e1;
 }
 
-.hud-val {
-  font-size: 20px;
+.metrics-2col dt {
+  color: var(--text-secondary);
+}
+
+.metrics-2col dd {
   font-weight: 700;
   margin-top: 2px;
 }
 
-.cabin-summary-bar {
+/* ==================== ABA 2: INSPEÇÃO IA DO CAMINHÃO (BLUEPRINT HUD) ==================== */
+.inspector-grid {
+  display: grid;
+  grid-template-columns: minmax(270px, 1fr) minmax(340px, 1.35fr) minmax(300px, 1.15fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.blueprint-stage {
+  background-color: #071526;
+  color: #e0f2fe;
+  border: 1px solid #1d4e78;
+  border-radius: 12px;
+  padding: 16px;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: center;
+}
+
+.blueprint-svg {
+  width: 100%;
+  max-width: 390px;
+  height: auto;
+  display: block;
+}
+
+.comp-hotspot {
+  cursor: pointer;
+}
+
+.part-btn {
+  width: 100%;
+  text-align: left;
+  background-color: transparent;
+  color: var(--text-primary);
+  border: none;
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 11px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding-top: 8px;
-  font-size: 14px;
-  color: var(--text-secondary);
+  border-radius: 6px;
 }
 
-.alert-card-row {
+.part-btn:hover {
+  background-color: var(--bg-control);
+}
+
+.part-btn.selected {
+  background-color: var(--accent-sky-soft);
+}
+
+.health-bar-track {
+  width: 100%;
+  height: 8px;
+  background-color: var(--bg-inset);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.health-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ==================== ABA 3: CENTRAL MULTIMÍDIA ESTILO CARPLAY ==================== */
+.carplay-shell {
+  max-width: 1260px;
+  margin: 0 auto;
+  background-color: #0b1118;
+  color: #f8fafc;
+  border: 2px solid #283b50;
+  border-radius: 16px;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  gap: 14px;
+  min-height: 610px;
+}
+
+/* CarPlay Left Vertical Dock */
+.carplay-dock {
+  background-color: #111b27;
+  border: 1px solid #223449;
+  border-radius: 14px;
+  padding: 12px 8px;
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-.icon-badge {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  display: inline-flex;
+.cp-status-stack {
+  text-align: center;
+  font-size: 12px;
+}
+
+.cp-clock {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.cp-signal {
+  font-size: 12px;
+  color: #6ee7b7;
+  font-weight: 600;
+}
+
+.cp-app-icons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  align-items: center;
+}
+
+.cp-icon-btn {
+  width: 54px;
+  height: 54px;
+  border-radius: 13px;
+  border: 1px solid #294058;
+  background-color: #172636;
+  color: #e2e8f0;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  gap: 2px;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
-.alert-body {
+.cp-icon-btn:hover {
+  background-color: #21374f;
+}
+
+.cp-icon-btn.active {
+  background-color: #0369a1;
+  border-color: #7dd3fc;
+  color: #ffffff;
+}
+
+.cp-voice-btn {
+  background-color: #047857;
+  border-color: #6ee7b7;
+  color: #ffffff;
+}
+
+/* CarPlay Main Workspace */
+.carplay-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.cp-split-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 1fr);
+  gap: 14px;
   flex: 1;
 }
 
-.alert-copy {
-  font-size: 15px;
-  line-height: 1.45;
-  margin-top: 4px;
-  color: var(--text-primary);
+.cp-map-box {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #263b52;
+  background-color: #08121c;
+  min-height: 460px;
+  display: flex;
+  flex-direction: column;
 }
 
-.alert-note {
-  font-size: 12px;
-  margin-top: 6px;
-  color: var(--text-secondary);
+.cp-map-canvas {
+  flex: 1;
+  width: 100%;
+  min-height: 360px;
 }
 
-/* RotaCAM 4 Cameras */
+/* Highway Road Sign Overlay inside CarPlay Map */
+.cp-nav-overlay {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 500;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.cp-turn-box {
+  background-color: rgba(9, 16, 24, 0.94);
+  color: #ffffff;
+  border: 2px solid #476582;
+  border-radius: 10px;
+  padding: 10px 14px;
+  text-align: center;
+}
+
+.cp-road-sign {
+  background-color: rgba(20, 69, 150, 0.95);
+  color: #ffffff;
+  border: 2px solid #93c5fd;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.cp-hub-sign {
+  background-color: rgba(14, 90, 56, 0.95);
+  color: #ffffff;
+  border: 2px solid #86efac;
+  border-radius: 10px;
+  padding: 10px 14px;
+  text-align: center;
+}
+
+.cp-eta-bar {
+  background-color: #0e1925;
+  border-top: 1px solid #23374d;
+  padding: 10px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cp-widgets-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cp-widget {
+  background-color: #13202e;
+  border: 1px solid #243950;
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.cp-cabin-btn {
+  min-height: 48px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cp-media-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* CarPlay Apps Grid & Comms */
+.cp-apps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cp-action-tile {
+  background-color: #13202e;
+  border: 1px solid #273e57;
+  border-radius: 14px;
+  padding: 18px;
+  color: #f8fafc;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cp-action-tile:hover {
+  background-color: #1a2c40;
+}
+
+/* RotaCAM Grid */
 .cam-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
 }
 
 .cam-feed {
@@ -762,12 +899,26 @@ select:focus-visible {
   border-radius: 4px;
 }
 
-/* Toast Notification */
+/* Google API Config Drawer (Inline progressive disclosure, no modal) */
+.api-drawer {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Toast */
 .sys-toast {
   position: fixed;
   right: 20px;
   bottom: 20px;
-  max-width: 420px;
+  max-width: 440px;
   background-color: #0e1c2a;
   color: #f8fafc;
   border: 1px solid #38bdf8;
@@ -775,27 +926,37 @@ select:focus-visible {
   padding: 12px 16px;
   font-size: 13px;
   font-weight: 600;
-  z-index: 50;
+  z-index: 2000;
 }
 
-/* Responsive Breakpoints */
-@media (max-width: 1024px) {
+@media (max-width: 1120px) {
   .kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .tower-grid,
-  .driver-grid {
+  .inspector-grid,
+  .cp-split-grid {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 640px) {
-  .kpi-grid,
-  .cam-grid,
-  .signs-grid {
+@media (max-width: 720px) {
+  .carplay-shell {
     grid-template-columns: 1fr;
   }
-  .app-main {
-    padding: 14px;
+  .carplay-dock {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .cp-app-icons {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: auto;
+  }
+  .kpi-grid,
+  .cam-grid,
+  .cp-apps-grid,
+  .cp-nav-overlay {
+    grid-template-columns: 1fr;
   }
 }
